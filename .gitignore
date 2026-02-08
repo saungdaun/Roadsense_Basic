@@ -1,27 +1,92 @@
-# Android Studio / IDE
+# ===============================
+# ANDROID / GRADLE
+# ===============================
+
+.gradle/
+build/
+*/build/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Local config (VERY IMPORTANT)
+local.properties
+
+# Keystore (JANGAN SAMPE KE PUSH)
+*.jks
+*.keystore
+*.pem
+
+# ===============================
+# ANDROID STUDIO
+# ===============================
+
+.idea/
 *.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
 
-# Build
-/build
-/captures
-.externalNativeBuild
-.cxx
+# Tapi keep dictionary kalau ada
+.idea/dictionaries
+.idea/codeStyles
 
-# Kotlin / Gradle
-.kotlinc/
-.gradle-cache/
+# ===============================
+# LOGS
+# ===============================
 
-# OS
+*.log
+
+# ===============================
+# OS FILES
+# ===============================
+
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Local settings
-local.properties
+# ===============================
+# KOTLIN
+# ===============================
+
+.kotlin/
+kotlin-js-store/
+
+# ===============================
+# NAVIGATION SAFE ARGS
+# ===============================
+
+.navigation/
+
+# ===============================
+# TEMP FILES
+# ===============================
+
+*.tmp
+*.temp
+*.bak
+*.swp
+
+# ===============================
+# GOOGLE SERVICES (kalau nanti pake Firebase)
+# ===============================
+
+google-services.json
+
+# ===============================
+# NDK (kalau someday pake)
+# ===============================
+
+obj/
+
+# ===============================
+# FASTLANE (kalau nanti CI/CD)
+# ===============================
+
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# ===============================
+# PLAYGROUND / EXPERIMENTAL
+# ===============================
+
+sandbox/
