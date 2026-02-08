@@ -7,12 +7,16 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
+import androidx.navigation.ui.AppBarConfiguration
+import androidx.navigation.ui.navigateUp
+import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import timber.log.Timber
 import zaujaani.roadsense.databinding.ActivityMainBinding
@@ -21,106 +25,107 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var navController: NavController
+    private lateinit var appBarConfiguration: AppBarConfiguration
 
-    // Permission request launcher
-    private val requestPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val allGranted = permissions.all { it.value }
-        if (allGranted) {
-            Timber.d("All permissions granted")
-            setupNavigation()
-        } else {
-            showPermissionRationale()
+    private val requestPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            if (permissions.all { it.value }) {
+                Timber.d("All permissions granted")
+            } else {
+                showPermissionRationale()
+            }
         }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        if (BuildConfig.DEBUG) {
+            Timber.plant(Timber.DebugTree())
+        }
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        setSupportActionBar(binding.toolbar)
+
+        setupNavigation()
         setupPermissions()
+
         Timber.d("MainActivity created")
     }
 
     private fun setupNavigation() {
-        val navHostFragment = supportFragmentManager
-            .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+        val navHostFragment =
+            supportFragmentManager.findFragmentById(R.id.nav_host_fragment)
+                    as NavHostFragment
+
         navController = navHostFragment.navController
 
-        // Setup bottom navigation with NavController
-        binding.bottomNavigation.setupWithNavController(navController)
+        appBarConfiguration = AppBarConfiguration(
+            setOf(
+                R.id.surveyFragment,
+                R.id.dataFragment,
+                R.id.reportFragment,
+                R.id.settingsFragment
+            ),
+            binding.drawerLayout
+        )
+
+        setupActionBarWithNavController(navController, appBarConfiguration)
+        binding.navView.setupWithNavController(navController)
     }
 
     private fun setupPermissions() {
-        val requiredPermissions = mutableListOf<String>()
+        val permissions = mutableListOf<String>()
 
-        // Bluetooth permissions
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            requiredPermissions.add(Manifest.permission.BLUETOOTH_SCAN)
-            requiredPermissions.add(Manifest.permission.BLUETOOTH_CONNECT)
+            permissions += Manifest.permission.BLUETOOTH_SCAN
+            permissions += Manifest.permission.BLUETOOTH_CONNECT
         } else {
-            requiredPermissions.add(Manifest.permission.BLUETOOTH)
-            requiredPermissions.add(Manifest.permission.BLUETOOTH_ADMIN)
+            permissions += Manifest.permission.BLUETOOTH
+            permissions += Manifest.permission.BLUETOOTH_ADMIN
         }
 
-        // Location permissions
-        requiredPermissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
-        requiredPermissions.add(Manifest.permission.ACCESS_COARSE_LOCATION)
+        permissions += Manifest.permission.ACCESS_FINE_LOCATION
+        permissions += Manifest.permission.ACCESS_COARSE_LOCATION
 
-        // Filter permissions that are not granted yet
-        val permissionsToRequest = requiredPermissions.filter {
+        val toRequest = permissions.filter {
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
         }
 
-        if (permissionsToRequest.isNotEmpty()) {
-            requestPermissionLauncher.launch(permissionsToRequest.toTypedArray())
-        } else {
-            Timber.d("All permissions already granted")
-            setupNavigation()
+        if (toRequest.isNotEmpty()) {
+            requestPermissionLauncher.launch(toRequest.toTypedArray())
         }
     }
 
     private fun showPermissionRationale() {
-        val builder = AlertDialog.Builder(this)
-            .setTitle(getString(R.string.permission_bluetooth_title))
-            .setMessage(getString(R.string.permission_rationale))
-
-        // Check if user selected "Don't ask again" for any permission
-        val permanentlyDenied = listOf(
-            Manifest.permission.BLUETOOTH_SCAN,
-            Manifest.permission.BLUETOOTH_CONNECT,
-            Manifest.permission.BLUETOOTH,
-            Manifest.permission.BLUETOOTH_ADMIN,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION
-        ).any { perm ->
-            ContextCompat.checkSelfPermission(this, perm) != PackageManager.PERMISSION_GRANTED &&
-                    !shouldShowRequestPermissionRationale(perm)
-        }
-
-        if (permanentlyDenied) {
-            builder.setMessage("Permissions are permanently denied. Please enable them in Settings.")
-                .setPositiveButton("Open Settings") { _, _ ->
-                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                    val uri: Uri = Uri.fromParts("package", packageName, null)
-                    intent.data = uri
-                    startActivity(intent)
-                }
-                .setNegativeButton("Exit") { _, _ -> finish() }
-        } else {
-            builder.setPositiveButton("Grant Permissions") { _, _ ->
-                setupPermissions()
+        AlertDialog.Builder(this)
+            .setTitle("Permission Required")
+            .setMessage(
+                "RoadSense needs permissions for:\n\n" +
+                        "• Bluetooth (sensor connection)\n" +
+                        "• Location (survey tracking)"
+            )
+            .setPositiveButton("Open Settings") { _, _ ->
+                startActivity(
+                    Intent(
+                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        Uri.fromParts("package", packageName, null)
+                    )
+                )
             }
-                .setNegativeButton("Exit") { _, _ -> finish() }
-        }
-
-        builder.show()
+            .setNegativeButton("Continue Anyway") { _, _ ->
+                Toast.makeText(
+                    this,
+                    "Some features may not work properly",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            .setCancelable(false)
+            .show()
     }
 
     override fun onSupportNavigateUp(): Boolean {
-        return navController.navigateUp() || super.onSupportNavigateUp()
+        return navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()
     }
 }

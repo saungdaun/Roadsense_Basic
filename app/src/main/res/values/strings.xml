@@ -31,8 +31,8 @@
     <string name="error_connection">Connection Error</string>
 
     <!-- Status -->
-    <string name="status_ready">Ready</string>
-    <string name="status_running">Running</string>
+    <string name="status_ready">Ready to Start</string>
+    <string name="status_running">Survey Running</string>
     <string name="status_paused">Paused</string>
     <string name="status_stopped">Stopped</string>
 
@@ -44,18 +44,53 @@
     <string name="settings_bluetooth">Bluetooth</string>
     <string name="settings_gps">GPS</string>
     <string name="settings_data">Data Collection</string>
-
-    <!-- Help -->
-    <string name="help_user_guide">User Guide</string>
-    <string name="help_faq">FAQ</string>
-    <string name="help_support">Support</string>
-
-    <!-- New strings for fragment layouts -->
     <string name="settings_about">About</string>
     <string name="settings_notifications">Notifications</string>
     <string name="settings_help_support">Help &amp; Support</string>
     <string name="settings_bluetooth_desc">Configure Bluetooth devices</string>
     <string name="settings_app_desc">Road survey and monitoring application</string>
+
+    <!-- Help -->
+    <string name="help_user_guide">User Guide</string>
+    <string name="help_faq">FAQ</string>
+    <string name="help_support">Support</string>
+    <string name="help_contact">Contact</string>
+    <string name="help_hours">Hours</string>
+    <string name="help_version">Version</string>
+    <string name="help_all_rights">All rights reserved</string>
+
+    <!-- Surface Types -->
+    <string name="surface_aspal">Aspal</string>
+    <string name="surface_beton">Beton</string>
+    <string name="surface_tanah">Tanah</string>
+    <string name="surface_aspal_desc">Asphalt surface</string>
+    <string name="surface_beton_desc">Concrete surface</string>
+    <string name="surface_tanah_desc">Earth/unpaved surface</string>
+
+    <!-- Road Conditions -->
+    <string name="condition_good">Good</string>
+    <string name="condition_fair">Fair</string>
+    <string name="condition_light_damage">Light Damage</string>
+    <string name="condition_heavy_damage">Heavy Damage</string>
+    <string name="condition_good_desc">Excellent condition</string>
+    <string name="condition_fair_desc">Minor wear visible</string>
+    <string name="condition_light_desc">Some cracks/potholes</string>
+    <string name="condition_heavy_desc">Severe deterioration</string>
+
+    <!-- Survey Labels -->
+    <string name="label_surface_type">Surface Type</string>
+    <string name="label_road_condition">Road Condition</string>
+    <string name="label_survey_info">Survey Information</string>
+    <string name="label_distance">Distance</string>
+    <string name="label_duration">Duration</string>
+    <string name="label_select">Select</string>
+    <string name="label_status">Status</string>
+
+    <!-- Format Strings -->
+    <string name="format_distance">%.2f km</string>
+    <string name="format_duration" formatted="false">%d:%d</string>
+
+
 
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>

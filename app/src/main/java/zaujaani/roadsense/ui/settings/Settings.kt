@@ -9,15 +9,16 @@ import androidx.navigation.fragment.findNavController
 import zaujaani.roadsense.R
 import zaujaani.roadsense.databinding.FragmentSettingsBinding
 
-class Settings : Fragment() {
+class SettingsFragment : Fragment() {
 
     private var _binding: FragmentSettingsBinding? = null
     private val binding get() = _binding!!
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
+        inflater: LayoutInflater,
+        container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
+    ): View {
         _binding = FragmentSettingsBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -25,24 +26,48 @@ class Settings : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Setup buttons
-        binding.btnHelp.setOnClickListener {
-            findNavController().navigate(R.id.action_settings_to_help)
+        setupToolbar()
+        setupClickListeners()
+    }
+
+    private fun setupToolbar() {
+        // Setup back navigation di toolbar
+        binding.toolbar.setNavigationOnClickListener {
+            // Kembali ke fragment sebelumnya
+            findNavController().navigateUp()
+        }
+    }
+
+    private fun setupClickListeners() {
+        // Bluetooth Settings
+        binding.bluetoothSettings.setOnClickListener {
+            // TODO: Implement bluetooth settings
         }
 
-        // Setup other settings items
-        binding.switchNotifications.setOnCheckedChangeListener { _, isChecked ->
-            // Handle notification settings
+        // GPS Settings
+        binding.gpsSettings.setOnClickListener {
+            // TODO: Implement GPS settings
+        }
+
+        // Data Settings
+        binding.dataSettings.setOnClickListener {
+            // TODO: Implement data settings
+        }
+
+        // Help & Support - Navigasi ke HelpFragment
+        binding.helpSupport.setOnClickListener {
+            findNavController().navigate(R.id.helpFragment)
+        }
+
+        // About - Navigasi ke AboutFragment atau tampilkan dialog
+        binding.about.setOnClickListener {
+            // TODO: Implement about
+            // findNavController().navigate(R.id.aboutFragment)
         }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
-    }
-
-    companion object {
-        @JvmStatic
-        fun newInstance() = Settings()
     }
 }

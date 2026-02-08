@@ -5,19 +5,24 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
-import zaujaani.roadsense.R
+import zaujaani.roadsense.databinding.FragmentDataBinding
 
 class Data : Fragment() {
 
+    private var _binding: FragmentDataBinding? = null
+    private val binding get() = _binding!!
+
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
+        inflater: LayoutInflater,
+        container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.fragment_data, container, false)
+    ): View {
+        _binding = FragmentDataBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
-    companion object {
-        @JvmStatic
-        fun newInstance() = Data()
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_survey"
+            android:icon="@drawable/ic_survey"
+            android:title="Survey" />
+
+        <item
+            android:id="@+id/nav_data"
+            android:icon="@drawable/ic_data"
+            android:title="Data" />
+
+        <item
+            android:id="@+id/nav_report"
+            android:icon="@drawable/ic_report"
+            android:title="Report" />
+
+        <item
+            android:id="@+id/nav_settings"
+            android:icon="@drawable/ic_settings"
+            android:title="Settings" />
+
+        <item
+            android:id="@+id/nav_help"
+            android:icon="@drawable/ic_help"
+            android:title="Help" />
+        <item
+            android:id="@+id/nav_calibration"
+            android:icon="@drawable/ic_calibrations"
+            android:title="Calibration" />
+    </group>
+
+</menu>
