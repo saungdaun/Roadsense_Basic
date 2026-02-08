@@ -1,3 +1,7 @@
+# ==========================
+# Android / Kotlin Project
+# ==========================
+
 # Set default behavior to automatically normalize line endings
 * text=auto
 
@@ -13,6 +17,9 @@
 *.json       text
 *.yml        text
 *.gitignore  text
+*.properties text
+*.csv        text
+*.iml        text
 
 # Binary files should be left alone
 *.png        binary
@@ -24,3 +31,17 @@
 *.aar        binary
 *.so         binary
 *.keystore   binary
+*.db         binary
+*.sqlite     binary
+*.p12        binary
+*.jks        binary
+*.keystore   binary
+
+# Misc
+*.class      binary
+*.dex        binary
+*.apk        binary
+*.ap_        binary
+*.exe        binary
+*.dll        binary
+*.lib        binary
