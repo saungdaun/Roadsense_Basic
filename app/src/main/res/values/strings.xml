@@ -1,3 +1,52 @@
 <resources>
     <string name="app_name">Roadsense</string>
+    <string name="action_start">Start</string>
+    <string name="action_stop">Stop</string>
+    <string name="action_pause">Pause</string>
+    <string name="action_resume">Resume</string>
+    <string name="title_survey">Survey</string>
+    <string name="title_data">Data</string>
+    <string name="title_report">Report</string>
+    <string name="title_settings">Settings</string>
+    <string name="title_help">Help</string>
+
+    <!-- Bluetooth -->
+    <string name="bluetooth_connecting">Connecting...</string>
+    <string name="bluetooth_connected">Connected</string>
+    <string name="bluetooth_disconnected">Disconnected</string>
+    <string name="bluetooth_scanning">Scanning...</string>
+
+    <!-- GPS -->
+    <string name="gps_active">GPS Active</string>
+    <string name="gps_inactive">GPS Inactive</string>
+
+    <!-- Permissions -->
+    <string name="permission_bluetooth_title">Bluetooth Permission</string>
+    <string name="permission_location_title">Location Permission</string>
+    <string name="permission_rationale">RoadSense needs these permissions to connect to sensors and track location</string>
+
+    <!-- Errors -->
+    <string name="error_bluetooth">Bluetooth Error</string>
+    <string name="error_gps">GPS Error</string>
+    <string name="error_connection">Connection Error</string>
+
+    <!-- Status -->
+    <string name="status_ready">Ready</string>
+    <string name="status_running">Running</string>
+    <string name="status_paused">Paused</string>
+    <string name="status_stopped">Stopped</string>
+
+    <!-- Calibration -->
+    <string name="calibration_distance">Distance Calibration</string>
+    <string name="calibration_imu">IMU Calibration</string>
+
+    <!-- Settings -->
+    <string name="settings_bluetooth">Bluetooth</string>
+    <string name="settings_gps">GPS</string>
+    <string name="settings_data">Data Collection</string>
+
+    <!-- Help -->
+    <string name="help_user_guide">User Guide</string>
+    <string name="help_faq">FAQ</string>
+    <string name="help_support">Support</string>
 </resources>

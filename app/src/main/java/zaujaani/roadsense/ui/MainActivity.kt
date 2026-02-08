@@ -1,4 +1,4 @@
-package zaujaani.roadsense
+package zaujaani.roadsense.ui
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
@@ -11,16 +11,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Setup ViewBinding
         binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-
-        setupUI()
-    }
-
-    private fun setupUI() {
-        // Setup UI components here
-        binding.mainText.text = "Welcome to Roadsense"
-
-        // Contoh: setup button click listeners, etc.
-    }
+        setContentView(binding.root)}
 }
