@@ -1,0 +1,26 @@
+# Set default behavior to automatically normalize line endings
+* text=auto
+
+# Explicitly declare text files you want to always normalize
+*.java       text
+*.kt         text
+*.kts        text
+*.xml        text
+*.gradle     text
+*.pro        text
+*.txt        text
+*.md         text
+*.json       text
+*.yml        text
+*.gitignore  text
+
+# Binary files should be left alone
+*.png        binary
+*.jpg        binary
+*.jpeg       binary
+*.gif        binary
+*.ico        binary
+*.jar        binary
+*.aar        binary
+*.so         binary
+*.keystore   binary
