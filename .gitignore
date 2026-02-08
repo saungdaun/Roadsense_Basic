@@ -1,0 +1,27 @@
+# Android Studio / IDE
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+
+# Build
+/build
+/captures
+.externalNativeBuild
+.cxx
+
+# Kotlin / Gradle
+.kotlinc/
+.gradle-cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local settings
+local.properties
