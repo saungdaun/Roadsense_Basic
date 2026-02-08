@@ -28,19 +28,19 @@
 
         <!-- Button style -->
         <item name="materialButtonStyle">@style/Widget.Roadsense.Button</item>
+
+        <!-- Bottom Navigation -->
+        <item name="bottomNavigationStyle">@style/Widget.Roadsense.BottomNavigation</item>
     </style>
 
     <!-- Splash screen theme -->
-    <style name="Theme.Roadsense.Splash" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/primary</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
-        <item name="postSplashScreenTheme">@style/Theme.Roadsense</item>
-    </style>
-
-    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/white</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
-        <item name="postSplashScreenTheme">@style/Theme.Roadsense</item>
+    <style name="Theme.Roadsense.Splash" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:windowBackground">@color/primary</item>
+        <item name="android:statusBarColor">@color/primary_dark</item>
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
     </style>
 
     <!-- CardView style -->
@@ -55,6 +55,24 @@
         <item name="android:minHeight">48dp</item>
         <item name="android:paddingHorizontal">24dp</item>
         <item name="cornerRadius">24dp</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="backgroundTint">@color/primary</item>
+    </style>
+
+    <!-- Text Button style -->
+    <style name="Widget.Roadsense.TextButton" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:textColor">@color/primary</item>
+        <item name="android:paddingHorizontal">16dp</item>
+        <item name="android:paddingVertical">8dp</item>
+        <item name="rippleColor">@color/primary_light</item>
+    </style>
+
+    <!-- Bottom Navigation style -->
+    <style name="Widget.Roadsense.BottomNavigation" parent="Widget.MaterialComponents.BottomNavigationView">
+        <item name="itemIconTint">@drawable/bottom_nav_color_state</item>
+        <item name="itemTextColor">@drawable/bottom_nav_color_state</item>
+        <item name="itemBackground">@color/white</item>
+        <item name="android:elevation">8dp</item>
     </style>
 
     <!-- Dark theme -->

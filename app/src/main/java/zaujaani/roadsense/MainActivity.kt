@@ -30,7 +30,6 @@ class MainActivity : AppCompatActivity() {
         if (allGranted) {
             Timber.d("All permissions granted")
             setupNavigation()
-            setupUI()
         } else {
             showPermissionRationale()
         }
@@ -52,7 +51,7 @@ class MainActivity : AppCompatActivity() {
         navController = navHostFragment.navController
 
         // Setup bottom navigation with NavController
-        binding.bottomNavigationView.setupWithNavController(navController)
+        binding.bottomNavigation.setupWithNavController(navController)
     }
 
     private fun setupPermissions() {
@@ -81,14 +80,13 @@ class MainActivity : AppCompatActivity() {
         } else {
             Timber.d("All permissions already granted")
             setupNavigation()
-            setupUI()
         }
     }
 
     private fun showPermissionRationale() {
         val builder = AlertDialog.Builder(this)
-            .setTitle("Permissions Required")
-            .setMessage("RoadSense needs Bluetooth and Location permissions to function properly.")
+            .setTitle(getString(R.string.permission_bluetooth_title))
+            .setMessage(getString(R.string.permission_rationale))
 
         // Check if user selected "Don't ask again" for any permission
         val permanentlyDenied = listOf(
@@ -120,15 +118,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         builder.show()
-    }
-
-    private fun setupUI() {
-        // Setup additional UI components here
-        try {
-            // Jika ada komponen UI lain yang perlu di-setup
-        } catch (e: Exception) {
-            Timber.d("UI setup error: ${e.message}")
-        }
     }
 
     override fun onSupportNavigateUp(): Boolean {

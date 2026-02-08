@@ -25,9 +25,10 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Roadsense">
+        android:theme="@style/Theme.Roadsense"
+        tools:targetApi="31">
 
-        <!-- SplashActivity -->
+        <!-- SplashActivity dengan tema AppCompat -->
         <activity
             android:name=".ui.SplashActivity"
             android:exported="true"
@@ -42,9 +43,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.Roadsense">
-            <!-- Hapus intent-filter di sini karena sudah ada di SplashActivity -->
-        </activity>
+            android:theme="@style/Theme.Roadsense" />
 
     </application>
 

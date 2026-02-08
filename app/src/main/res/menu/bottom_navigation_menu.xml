@@ -2,18 +2,28 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item
-        android:id="@+id/homeFragment"
-        android:icon="@drawable/ic_home"
-        android:title="Home" />
+        android:id="@+id/survey"
+        android:icon="@drawable/ic_survey"
+        android:title="@string/title_survey" />
 
     <item
-        android:id="@+id/devicesFragment"
-        android:icon="@drawable/ic_devices"
-        android:title="Devices" />
+        android:id="@+id/data"
+        android:icon="@drawable/ic_data"
+        android:title="@string/title_data" />
 
     <item
-        android:id="@+id/settingsFragment"
+        android:id="@+id/reports"
+        android:icon="@drawable/ic_reports"
+        android:title="@string/title_report" />
+
+    <item
+        android:id="@+id/calibrations"
+        android:icon="@drawable/ic_calibrations"
+        android:title="@string/calibration_imu" />
+
+    <item
+        android:id="@+id/settings"
         android:icon="@drawable/ic_settings"
-        android:title="Settings" />
+        android:title="@string/title_settings" />
 
 </menu>
