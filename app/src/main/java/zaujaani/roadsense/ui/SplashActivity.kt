@@ -5,7 +5,8 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import androidx.appcompat.app.AppCompatActivity
-import zaujaani.roadsense.R  // Tambahkan import ini
+import zaujaani.roadsense.MainActivity
+import zaujaani.roadsense.R
 
 class SplashActivity : AppCompatActivity() {
 
