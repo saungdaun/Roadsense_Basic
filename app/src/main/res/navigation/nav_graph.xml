@@ -3,110 +3,73 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/surveyFragment">
+    app:startDestination="@id/mapSurveyFragment">
 
-    <!-- Survey Fragment -->
+    <!-- Map Survey Fragment - Main tracking screen -->
     <fragment
-        android:id="@+id/surveyFragment"
-        android:name="zaujaani.roadsense.ui.survey.SurveyFragment"
-        android:label="@string/title_survey"
-        tools:layout="@layout/fragment_survey">
+        android:id="@+id/mapSurveyFragment"
+        android:name="zaujaani.roadsense.features.map.MapSurveyFragment"
+        android:label="@string/nav_map_survey"
+        tools:layout="@layout/fragment_map_survey">
 
-        <!-- Actions dari Survey ke fragment lain jika diperlukan -->
         <action
-            android:id="@+id/action_survey_to_settings"
+            android:id="@+id/action_mapSurvey_to_summary"
+            app:destination="@id/summaryFragment" />
+
+        <action
+            android:id="@+id/action_mapSurvey_to_calibration"
+            app:destination="@id/calibrationFragment" />
+
+        <action
+            android:id="@+id/action_mapSurvey_to_settings"
             app:destination="@id/settingsFragment" />
-        <action
-            android:id="@+id/action_survey_to_help"
-            app:destination="@id/helpFragment" />
-        <action
-            android:id="@+id/action_survey_to_data"
-            app:destination="@id/dataFragment" />
-        <action
-            android:id="@+id/action_survey_to_report"
-            app:destination="@id/reportFragment" />
-
     </fragment>
 
-    <!-- Data Fragment -->
+    <!-- Summary Fragment - View survey results -->
     <fragment
-        android:id="@+id/dataFragment"
-        android:name="zaujaani.roadsense.ui.data.Data"
-        android:label="@string/title_data"
-        tools:layout="@layout/fragment_data">
+        android:id="@+id/summaryFragment"
+        android:name="zaujaani.roadsense.features.summary.SummaryFragment"
+        android:label="@string/nav_summary"
+        tools:layout="@layout/fragment_summary">
+
+        <argument
+            android:name="sessionId"
+            android:defaultValue="-1L"
+            app:argType="long" />
 
         <action
-            android:id="@+id/action_data_to_survey"
-            app:destination="@id/surveyFragment"
-            app:popUpTo="@id/surveyFragment"
+            android:id="@+id/action_summary_to_map"
+            app:destination="@id/mapSurveyFragment"
+            app:popUpTo="@id/mapSurveyFragment"
             app:popUpToInclusive="false" />
-
     </fragment>
 
-    <!-- Report Fragment -->
+    <!-- Calibration Fragment -->
     <fragment
-        android:id="@+id/reportFragment"
-        android:name="zaujaani.roadsense.ui.report.Reports"
-        android:label="@string/title_report"
-        tools:layout="@layout/fragment_reports">
+        android:id="@+id/calibrationFragment"
+        android:name="zaujaani.roadsense.features.calibration.CalibrationFragment"
+        android:label="@string/nav_calibration"
+        tools:layout="@layout/fragment_calibration">
 
         <action
-            android:id="@+id/action_report_to_survey"
-            app:destination="@id/surveyFragment"
-            app:popUpTo="@id/surveyFragment"
+            android:id="@+id/action_calibration_to_map"
+            app:destination="@id/mapSurveyFragment"
+            app:popUpTo="@id/mapSurveyFragment"
             app:popUpToInclusive="false" />
-
     </fragment>
 
     <!-- Settings Fragment -->
     <fragment
         android:id="@+id/settingsFragment"
-        android:name="zaujaani.roadsense.ui.settings.SettingsFragment"
-        android:label="@string/title_settings"
+        android:name="zaujaani.roadsense.features.settings.SettingsFragment"
+        android:label="@string/nav_settings"
         tools:layout="@layout/fragment_settings">
 
         <action
-            android:id="@+id/action_settings_to_help"
-            app:destination="@id/helpFragment" />
-        <action
-            android:id="@+id/action_settings_to_survey"
-            app:destination="@id/surveyFragment"
-            app:popUpTo="@id/surveyFragment"
+            android:id="@+id/action_settings_to_map"
+            app:destination="@id/mapSurveyFragment"
+            app:popUpTo="@id/mapSurveyFragment"
             app:popUpToInclusive="false" />
-
-    </fragment>
-
-    <!-- Help Fragment -->
-    <fragment
-        android:id="@+id/helpFragment"
-        android:name="zaujaani.roadsense.ui.help.HelpFragment"
-        android:label="@string/title_help"
-        tools:layout="@layout/fragment_help">
-
-        <action
-            android:id="@+id/action_help_to_survey"
-            app:destination="@id/surveyFragment"
-            app:popUpTo="@id/surveyFragment"
-            app:popUpToInclusive="false" />
-        <action
-            android:id="@+id/action_help_to_settings"
-            app:destination="@id/settingsFragment" />
-
-    </fragment>
-
-    <!-- Calibration Fragment (Optional - jika ingin ditambahkan ke drawer) -->
-    <fragment
-        android:id="@+id/calibrationFragment"
-        android:name="zaujaani.roadsense.ui.calibration.Calibrations"
-        android:label="Calibration"
-        tools:layout="@layout/fragment_calibrations">
-
-        <action
-            android:id="@+id/action_calibration_to_survey"
-            app:destination="@id/surveyFragment"
-            app:popUpTo="@id/surveyFragment"
-            app:popUpToInclusive="false" />
-
     </fragment>
 
 </navigation>

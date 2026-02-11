@@ -1,38 +1,75 @@
-<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- ============ PERMISSIONS ============ -->
 
-    <!-- Permissions -->
-    <uses-permission android:name="android.permission.BLUETOOTH" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
-    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
-    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <!-- Location Permissions -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
-    <!-- Feature declarations -->
-    <uses-feature android:name="android.hardware.bluetooth" android:required="true" />
-    <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
+    <!-- Bluetooth Permissions (Legacy - Android 11 and below) -->
+    <uses-permission android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+
+    <!-- Bluetooth Permissions (New - Android 12+) -->
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation"
+        tools:targetApi="s" />
+
+    <!-- Notification Permission (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Foreground Service Permissions (Android 14+) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+
+    <!-- Internet & Network for OSM -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+
+    <!-- Storage Permissions (Legacy) -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
+    <!-- Camera Permission for survey documentation -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- Wake Lock to keep processing during survey -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- Hardware Features (optional to allow installation on devices without these) -->
+    <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
-    <uses-feature android:name="android.hardware.location" android:required="false" />
+    <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <application
         android:name=".RoadSenseApplication"
         android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Roadsense"
-        tools:targetApi="31"
-        android:enableOnBackInvokedCallback="true">
+        android:usesCleartextTraffic="true"
+        tools:targetApi="31">
 
-        <!-- SplashActivity dengan tema AppCompat -->
+        <!-- Splash Activity -->
         <activity
             android:name=".ui.SplashActivity"
             android:exported="true"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.Roadsense.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -40,11 +77,62 @@
             </intent-filter>
         </activity>
 
-        <!-- MainActivity -->
+        <!-- Main Activity -->
         <activity
             android:name=".MainActivity"
-            android:exported="true"
-            android:theme="@style/Theme.Roadsense" />
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:windowSoftInputMode="adjustResize">
+        </activity>
+
+        <!-- ============ TRACKING FOREGROUND SERVICE ============ -->
+        <!--
+            CRITICAL: This service keeps survey running even in background
+            - Auto-reconnect Bluetooth with exponential backoff
+            - Continuous GPS tracking
+            - Real-time telemetry processing
+            - Persistent notification for user awareness
+        -->
+        <service
+            android:name=".core.service.TrackingForegroundService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="location|dataSync"
+            android:stopWithTask="false">
+        </service>
+
+        <!-- OSM Configuration -->
+        <meta-data
+            android:name="osm_userAgent"
+            android:value="RoadSense/1.0 (Road Survey Application)" />
+        <meta-data
+            android:name="osm_cachePath"
+            android:value="/osmdroid/tiles" />
+        <meta-data
+            android:name="osm_cacheSize"
+            android:value="100" />
+        <meta-data
+            android:name="osm_tileDownloadThreads"
+            android:value="2" />
+        <meta-data
+            android:name="osm_tileFileSystemThreads"
+            android:value="8" />
+        <meta-data
+            android:name="osm_tileDownloadMaxQueueSize"
+            android:value="40" />
+
+        <!-- File Provider for sharing photos/exports -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
     </application>
 

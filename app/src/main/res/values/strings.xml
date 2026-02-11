@@ -11,9 +11,6 @@
     <string name="title_help">Help</string>
 
     <!-- Bluetooth -->
-    <string name="bluetooth_connecting">Connecting...</string>
-    <string name="bluetooth_connected">Connected</string>
-    <string name="bluetooth_disconnected">Disconnected</string>
     <string name="bluetooth_scanning">Scanning...</string>
 
     <!-- GPS -->
@@ -81,8 +78,7 @@
     <string name="label_surface_type">Surface Type</string>
     <string name="label_road_condition">Road Condition</string>
     <string name="label_survey_info">Survey Information</string>
-    <string name="label_distance">Distance</string>
-    <string name="label_duration">Duration</string>
+
     <string name="label_select">Select</string>
     <string name="label_status">Status</string>
 
@@ -90,8 +86,270 @@
     <string name="format_distance">%.2f km</string>
     <string name="format_duration" formatted="false">%d:%d</string>
 
+    <string name="good">Baik</string>
+    <string name="moderate">Sedang</string>
+    <string name="light_damage">Rusak Ringan</string>
+    <string name="heavy_damage">Rusak Berat</string>
 
+    <!-- Surfaces -->
+    <string name="asphalt">Aspal</string>
+    <string name="concrete">Beton</string>
+    <string name="gravel">Kerikil</string>
+    <string name="dirt">Tanah</string>
+    <string name="other">Lainnya</string>
+
+    <!-- Status -->
+    <string name="esp32_connected">ESP32: Connected</string>
+    <string name="esp32_disconnected">ESP32: Disconnected</string>
+
+    <!-- Errors -->
+    <string name="error_speed_too_high">Speed too high. Slow down to &lt; 20 km/h</string>
+    <string name="error_accuracy_poor">GPS accuracy poor. Wait for better signal</string>
+    <string name="error_permissions">Permissions required for tracking</string>
+    <string name="vibration_smooth">Smooth</string>
+    <string name="vibration_moderate">Moderate</string>
+    <string name="vibration_rough">Rough!</string>
+    <string name="format_vibration">Z: %1$.2fg (%2$s)</string>
+    <string name="vibration_default">Z: 0.00g</string>
+    <string name="vibration_na">N/A</string>
+
+    <!-- Accuracy status -->
+    <string name="accuracy_excellent">Excellent (%sm)</string>
+    <string name="accuracy_good">Good (%sm)</string>
+    <string name="accuracy_fair">Fair (%sm)</string>
+    <string name="accuracy_poor">Poor (%sm)</string>
+
+    <!-- Format strings -->
+    <string name="format_speed">%.1f km/h</string>
+    <string name="format_distance_km">%.2f km</string>
+
+    <!-- New Strings for Updated UI -->
+    <string name="btn_center_map">Center Map</string>
+    <string name="btn_settings">Settings</string>
+    <string name="btn_add_survey">Add Survey</string>
+    <string name="btn_start">START</string>
+    <string name="btn_stop">STOP</string>
+    <string name="btn_pause">PAUSE</string>
+    <string name="btn_resume">RESUME</string>
+
+    <string name="status_ready_ui">READY</string>
+    <string name="status_recording">RECORDING</string>
+    <string name="status_paused_ui">PAUSED</string>
+    <string name="status_creating_segment">CREATING SEGMENT</string>
+
+    <string name="gps_excellent">GPS: Excellent</string>
+    <string name="gps_good">GPS: Good</string>
+    <string name="gps_fair">GPS: Fair</string>
+    <string name="gps_poor">GPS: Poor</string>
+    <string name="gps_very_poor">GPS: Very Poor/No Signal</string>
+
+    <string name="msg_start_segment">Tap pada peta untuk titik awal dan akhir segment</string>
+    <string name="msg_no_esp32">Tidak bisa buat segment. Pastikan ESP32 terhubung dan GPS aktif</string>
+    <string name="msg_segment_cancelled">Segment creation cancelled</string>
+    <string name="msg_segment_start_set">Titik awal ditetapkan</string>
+    <string name="msg_segment_ready">Segment siap. Confidence: %s</string>
+    <string name="msg_map_centered">Map centered on current location</string>
+
+    <string name="dialog_stop_title">Stop Tracking</string>
+    <string name="dialog_stop_message">Apakah Anda yakin ingin menghentikan tracking?</string>
+    <string name="dialog_settings_title">Settings</string>
+    <string name="dialog_settings_wheel">Wheel Circumference</string>
+    <string name="dialog_settings_esp32">ESP32 Settings</string>
+    <string name="dialog_settings_gps">GPS Settings</string>
+
+    <string name="speed_label">Speed</string>
+    <string name="distance_label">Distance</string>
+    <string name="accuracy_label">Accuracy</string>
+    <string name="vibration_label">Vibration</string>
+
+    <string name="notification_tracking">RoadSense - ESP32 Primary</string>
+    <string name="notification_connecting">Connecting to ESP32...</string>
+    <string name="notification_recording">Recording - ESP32 Primary</string>
+    <string name="notification_paused">Paused</string>
+    <string name="notification_connection_failed">ESP32 Connection Failed</string>
+
+    <string name="confidence_high">High</string>
+    <string name="confidence_medium">Medium</string>
+    <string name="confidence_low">Low</string>
+
+    <string name="segment_creation_started">Segment creation started</string>
+    <string name="segment_creation_complete">Tap titik akhir pada peta</string>
+    <string name="segment_creation_cancelled">Segment creation cancelled</string>
+    <string name="segment_saved">Survey saved: %s (%s)</string>
+    <string name="segment_save_error">Failed to save segment</string>
+
+    <string name="road_name_empty">Please enter road name</string>
+    <string name="survey_saved">Survey saved: %s (%s)</string>
+
+    <string name="gps_status_searching">GPS: Searching...</string>
+    <string name="gps_status_available">GPS: Available</string>
+    <string name="gps_status_poor_signal">GPS: Poor Signal</string>
+    <string name="gps_status_error">GPS: Error</string>
+
+    <string name="esp32_status_connecting">ESP32: Connecting...</string>
+    <string name="esp32_status_connected">ESP32: Connected</string>
+    <string name="esp32_status_disconnected">ESP32: Disconnected</string>
+    <string name="esp32_status_error">ESP32: Error</string>
+
+    <string name="tracking_starting">Starting tracking...</string>
+    <string name="tracking_started">Tracking started successfully</string>
+    <string name="tracking_stopping">Stopping tracking...</string>
+    <string name="tracking_stopped">Tracking stopped successfully</string>
+    <string name="tracking_paused">Tracking paused</string>
+    <string name="tracking_resumed">Tracking resumed</string>
+    <string name="confidence_level">Confidence Level: %s</string>
+
+    <string name="bluetooth_permission_required">Bluetooth permission required</string>
+    <string name="location_permission_required">Location permission required</string>
+    <string name="permission_denied">Permission denied</string>
+    <string name="permission_granted">Permission granted</string>
+
+    <string name="settings_wheel_circumference">Wheel Circumference</string>
+    <string name="settings_esp32_config">ESP32 Configuration</string>
+    <string name="settings_gps_config">GPS Configuration</string>
+    <string name="settings_coming_soon">Coming soon</string>
+
+    <string name="unit_meters">m</string>
+    <string name="unit_kilometers">km</string>
+    <string name="unit_kilometers_per_hour">km/h</string>
+    <string name="unit_gravity">g</string>
+
+    <string name="map_loading">Loading map...</string>
+    <string name="map_loaded">Map loaded</string>
+    <string name="map_center_current">Centered on current location</string>
+    <string name="map_zoom_in">Zoom in</string>
+    <string name="map_zoom_out">Zoom out</string>
+
+    <string name="connection_retrying">Retrying connection... (Attempt %d)</string>
+    <string name="connection_max_attempts">Max connection attempts reached</string>
+    <string name="connection_lost">Connection lost</string>
+    <string name="connection_restored">Connection restored</string>
+
+    <string name="data_source_gps">GPS</string>
+    <string name="data_source_esp32">ESP32</string>
+    <string name="data_source_estimated">Estimated</string>
+
+    <string name="severity_none">None</string>
+    <string name="severity_low">Low</string>
+    <string name="severity_medium">Medium</string>
+    <string name="severity_high">High</string>
+    <string name="severity_critical">Critical</string>
+
+    <string name="notes_hint">Additional notes...</string>
+    <string name="road_name_hint">Enter road name</string>
+
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+    <string name="confirm">Confirm</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="ok">OK</string>
+    <string name="retry">Retry</string>
+
+    <!-- Navigation -->
+    <string name="nav_map_survey">Survey</string>
+    <string name="nav_summary">Summary</string>
+    <string name="nav_settings">Settings</string>
+    <string name="nav_calibration">Calibration</string>
+
+    <!-- Survey Screen -->
+    <string name="btn_start_survey">Start Survey</string>
+    <string name="btn_stop_survey">Stop Survey</string>
+    <string name="btn_pause_survey">Pause</string>
+    <string name="btn_resume_survey">Resume</string>
+    <string name="btn_connect_bluetooth">Connect Bluetooth</string>
+
+    <!-- Status -->
+    <string name="status_idle">Ready</string>
+    <string name="status_connecting">Connecting…</string>
+
+    <!-- Bluetooth -->
+    <string name="bluetooth_connected">Connected to ESP32</string>
+    <string name="bluetooth_disconnected">Bluetooth Disconnected</string>
+    <string name="bluetooth_connecting">Connecting to ESP32…</string>
+    <string name="bluetooth_error">Bluetooth Error: %s</string>
+
+    <!-- GPS -->
+    <string name="gps_available">GPS Available (±%1$.1fm)</string>
+    <string name="gps_searching">Searching GPS…</string>
+    <string name="gps_disabled">GPS Disabled</string>
+    <string name="gps_unavailable">GPS Unavailable (Survey uses Encoder)</string>
+
+    <!-- Data Display -->
+    <string name="label_distance">Distance</string>
+    <string name="label_speed">Speed</string>
+    <string name="label_iri">IRI (Roughness)</string>
+    <string name="label_quality">Road Quality</string>
+    <string name="label_session_id">Session ID</string>
+    <string name="label_duration">Duration</string>
+    <string name="label_data_points">Data Points</string>
+
+    <!-- Units -->
+    <string name="unit_distance_km">%.2f km</string>
+    <string name="unit_distance_m">%.1f m</string>
+    <string name="unit_speed">%.1f km/h</string>
+    <string name="unit_iri">%.2f</string>
+    <string name="unit_duration">%02d:%02d:%02d</string>
+
+    <!-- Quality Ratings -->
+    <string name="quality_excellent">EXCELLENT</string>
+    <string name="quality_good">GOOD</string>
+    <string name="quality_fair">FAIR</string>
+    <string name="quality_poor">POOR</string>
+    <string name="quality_bad">BAD</string>
+
+    <!-- Calibration -->
+    <string name="calibration_wheel_title">Wheel Circumference</string>
+    <string name="calibration_wheel_hint">Enter wheel circumference in meters</string>
+    <string name="calibration_z_axis_title">Z-Axis Offset</string>
+    <string name="calibration_z_axis_hint">Enter Z-axis offset</string>
+    <string name="btn_calibrate">Calibrate</string>
+    <string name="calibration_success">Calibration sent successfully</string>
+
+    <!-- Errors -->
+    <string name="error_no_bluetooth">Bluetooth not available</string>
+    <string name="error_bluetooth_disabled">Bluetooth is disabled</string>
+    <string name="error_esp32_not_found">ESP32 device not found</string>
+    <string name="error_connection_failed">Connection failed</string>
+    <string name="error_no_permission">Required permissions not granted</string>
+    <string name="error_survey_already_running">Survey already running</string>
+    <string name="error_no_active_survey">No active survey</string>
+
+    <!-- Permissions -->
+    <string name="permission_rationale_title">Permissions Required</string>
+    <string name="permission_rationale_message">RoadSense requires Location and Bluetooth permissions to function properly.</string>
+    <string name="btn_grant_permissions">Grant Permissions</string>
+    <string name="btn_open_settings">Open Settings</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_name">Survey Tracking</string>
+    <string name="notification_channel_description">Shows survey status and data</string>
+    <string name="notification_title">RoadSense Survey</string>
+    <string name="notification_text_idle">Ready to start survey</string>
+    <string name="notification_text_running">Survey in progress</string>
+
+    <!-- Summary -->
+    <string name="summary_no_data">No survey data available</string>
+    <string name="summary_total_distance">Total Distance: %s</string>
+    <string name="summary_avg_speed">Average Speed: %s</string>
+    <string name="summary_avg_iri">Average IRI: %s</string>
+    <string name="summary_quality_score">Quality Score: %.1f%%</string>
+    <string name="summary_data_points">Data Points: %d</string>
+    <string name="summary_duration">Duration: %s</string>
+
+    <!-- Menu -->
+    <string name="menu_export">Export Data</string>
+    <string name="menu_delete">Delete Survey</string>
+    <string name="menu_share">Share</string>
+
+    <!-- Dialog -->
+    <string name="dialog_delete_title">Delete Survey?</string>
+    <string name="dialog_delete_message">This action cannot be undone.</string>
+    <string name="btn_delete">Delete</string>
+    <string name="btn_cancel">Cancel</string>
 
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_delete">Delete</string>
 </resources>

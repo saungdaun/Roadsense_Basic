@@ -1,31 +1,69 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
+    <!-- Base theme for the application -->
     <style name="Theme.Roadsense" parent="Theme.Material3.DayNight.NoActionBar">
-
-        <!-- Primary -->
+        <!-- Primary colors -->
         <item name="colorPrimary">@color/primary</item>
         <item name="colorOnPrimary">@color/on_primary</item>
+        <item name="colorPrimaryContainer">@color/primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/on_primary_container</item>
 
-        <!-- Secondary -->
+        <!-- Secondary colors -->
         <item name="colorSecondary">@color/secondary</item>
         <item name="colorOnSecondary">@color/on_secondary</item>
+
+        <!-- Surface colors -->
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/on_surface</item>
 
         <!-- Background -->
         <item name="android:colorBackground">@color/background</item>
 
         <!-- Status bar -->
         <item name="android:statusBarColor">@color/primary</item>
+        <item name="android:navigationBarColor">@color/surface</item>
 
+        <!-- Outline -->
+        <item name="colorOutline">@color/outline</item>
+
+        <!-- Component overrides -->
+        <item name="materialButtonStyle">@style/Widget.Roadsense.Button</item>
+        <item name="chipStyle">@style/Widget.Roadsense.Chip</item>
     </style>
 
+    <!-- Custom button style -->
+    <style name="Widget.Roadsense.Button" parent="Widget.Material3.Button">
+        <item name="cornerRadius">@dimen/button_corner_radius</item>
+        <item name="android:minHeight">@dimen/button_height</item>
+        <item name="android:textSize">@dimen/text_medium</item>
+    </style>
+
+    <!-- Custom chip style -->
+    <style name="Widget.Roadsense.Chip" parent="Widget.Material3.Chip.Filter">
+        <item name="chipMinHeight">@dimen/chip_height</item>
+        <item name="chipCornerRadius">@dimen/chip_corner_radius</item>
+    </style>
 
     <!-- Splash Theme -->
-    <style name="Theme.Roadsense.Splash"
-        parent="Theme.Material3.DayNight.NoActionBar">
-
+    <style name="Theme.Roadsense.Splash" parent="Theme.Roadsense">
         <item name="android:windowBackground">@color/primary</item>
-
     </style>
 
+    <!-- Bottom Sheet Theme -->
+    <style name="BottomSheetDialogTheme" parent="Theme.Design.Light.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/ModalBottomSheetDialog</item>
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+
+    <style name="ModalBottomSheetDialog" parent="Widget.Design.BottomSheet.Modal">
+        <item name="android:background">@android:color/transparent</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowAnimationStyle">@style/BottomSheetAnimation</item>
+    </style>
+
+    <style name="BottomSheetAnimation">
+        <item name="android:windowEnterAnimation">@anim/slide_up</item>
+        <item name="android:windowExitAnimation">@anim/slide_down</item>
+    </style>
 </resources>

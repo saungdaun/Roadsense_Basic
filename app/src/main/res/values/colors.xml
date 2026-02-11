@@ -54,7 +54,111 @@
     <color name="surface_container">#F8FAFC</color>
     <color name="warning_orange">#FF9800</color>
 
+    <!-- BUTTON COLORS -->
+    <color name="start_green">#4CAF50</color>
+    <color name="stop_red">#F44336</color>
+    <color name="pause_yellow">#FFC107</color>
+    <color name="resume_blue">#2196F3</color>
 
+    <!-- STATUS COLORS -->
+    <color name="status_ready">#667085</color>
+    <color name="status_recording">#12B76A</color>
+    <color name="status_paused">#F79009</color>
+    <color name="status_creating_segment">#1570EF</color>
+    <color name="status_error">#F04438</color>
+
+    <!-- CONFIDENCE COLORS -->
+    <color name="confidence_high">#12B76A</color>
+    <color name="confidence_medium">#F79009</color>
+    <color name="confidence_low">#F04438</color>
+
+    <!-- VIBRATION COLORS -->
+    <color name="vibration_smooth">#12B76A</color>
+    <color name="vibration_moderate">#F79009</color>
+    <color name="vibration_rough">#F04438</color>
+
+    <!-- GPS COLORS -->
+    <color name="gps_excellent">#12B76A</color>
+    <color name="gps_good">#2E90FA</color>
+    <color name="gps_fair">#F79009</color>
+    <color name="gps_poor">#F04438</color>
+    <color name="gps_none">#667085</color>
+
+    <!-- Material Colors -->
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+
+
+    <color name="accent">#FF9800</color>
+
+    <!-- Text Colors -->
+    <color name="primary_text">#212121</color>
+    <color name="secondary_text">#757575</color>
+    <color name="hint_text">#BDBDBD</color>
+
+
+    <color name="divider">#E0E0E0</color>
+
+
+
+
+    <!-- Condition Colors -->
+    <color name="condition_good">#4CAF50</color>
+    <color name="condition_moderate">#FF9800</color>
+    <color name="condition_light_damage">#FF5722</color>
+    <color name="condition_heavy_damage">#D32F2F</color>
+
+    <!-- Surface Colors -->
+    <color name="surface_asphalt">#795548</color>
+    <color name="surface_concrete">#9E9E9E</color>
+    <color name="surface_gravel">#8D6E63</color>
+    <color name="surface_dirt">#8D6E63</color>
+    <color name="surface_other">#607D8B</color>
+
+    <!-- Map Colors -->
+    <color name="map_tracking_line">#4CAF50</color>
+    <color name="map_segment_line">#2196F3</color>
+    <color name="map_marker">#F44336</color>
+
+    <!-- Notification Colors -->
+    <color name="notification_tracking">#4CAF50</color>
+    <color name="notification_esp32">#2196F3</color>
+    <color name="notification_error">#F44336</color>
+
+    <!-- Chart Colors -->
+    <color name="chart_bar_1">#2196F3</color>
+    <color name="chart_bar_2">#4CAF50</color>
+    <color name="chart_bar_3">#FF9800</color>
+    <color name="chart_bar_4">#F44336</color>
+    <color name="chart_bar_5">#9C27B0</color>
+    <color name="light_gray">#F5F5F5</color>
+    <color name="tracking_line">#4CAF50</color>
+    <color name="segment_line">#2196F3</color>
+
+    <!-- Tambahkan untuk SummaryAdapter -->
+    <color name="confidence_high_bg">#D1FAE5</color>
+    <color name="confidence_high_text">#065F46</color>
+    <color name="confidence_medium_bg">#FEF3C7</color>
+    <color name="confidence_medium_text">#92400E</color>
+    <color name="confidence_low_bg">#FEE2E2</color>
+    <color name="confidence_low_text">#991B1B</color>
+
+    <color name="severity_critical">#DC2626</color>
+    <color name="severity_high">#F97316</color>
+    <color name="severity_medium">#F59E0B</color>
+    <color name="severity_low">#10B981</color>
+    <color name="severity_none">#6B7280</color>
+
+    <color name="speed_high">#DC2626</color>
+    <color name="speed_medium">#F59E0B</color>
+    <color name="speed_low">#10B981</color>
+
+    <color name="vibration_spike">#991B1B</color>
+
+    <color name="gps_very_poor">#6B7280</color>
 
 
 </resources>

@@ -1,0 +1,315 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background"
+    tools:context=".features.map.MapSurveyFragment">
+
+    <!-- Map View (OSM) - Selalu di belakang -->
+    <org.osmdroid.views.MapView
+        android:id="@+id/mapView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Panel Status Atas (Device, GPS, ESP32, Packet) -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/statusCard"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="@dimen/spacing_medium"
+        app:cardBackgroundColor="@color/surface_container"
+        app:cardCornerRadius="@dimen/status_panel_corner_radius"
+        app:cardElevation="@dimen/elevation_small"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="@dimen/spacing_medium">
+
+            <!-- Baris 1: Status device & GPS -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:weightSum="2">
+
+                <TextView
+                    android:id="@+id/tvStatus"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:padding="@dimen/spacing_small"
+                    android:text="@string/status_ready"
+                    android:textColor="@color/white"
+                    android:textSize="@dimen/text_small"
+                    android:textStyle="bold"
+                    android:background="@color/status_ready" />
+
+                <TextView
+                    android:id="@+id/tvGpsStatus"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:padding="@dimen/spacing_small"
+                    android:text="@string/gps_unavailable"
+                    android:textColor="@color/gps_none"
+                    android:textSize="@dimen/text_small" />
+            </LinearLayout>
+
+            <!-- Baris 2: Koneksi ESP32 & Packet Info -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_small"
+                android:orientation="horizontal"
+                android:weightSum="2">
+
+                <TextView
+                    android:id="@+id/tvConnectionStatus"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="@string/esp32_disconnected"
+                    android:textColor="@color/disconnected_red"
+                    android:textSize="@dimen/text_small" />
+
+                <TextView
+                    android:id="@+id/tvPacketInfo"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="Packets: 0 | Errors: 0"
+                    android:textColor="@color/gray_700"
+                    android:textSize="@dimen/text_small" />
+            </LinearLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Indikator Z-Axis (hanya View, warna diatur dari kode) -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/zAxisCard"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="@dimen/spacing_medium"
+        app:cardCornerRadius="@dimen/status_panel_corner_radius"
+        app:cardElevation="@dimen/elevation_small"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/statusCard">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="@dimen/spacing_small">
+
+            <View
+                android:id="@+id/zAxisIndicator"
+                android:layout_width="@dimen/icon_small"
+                android:layout_height="@dimen/icon_small"
+                android:layout_gravity="center_vertical"
+                android:background="@color/gray_300" />  <!-- warna default, akan diganti di kode -->
+
+            <TextView
+                android:id="@+id/tvZAxisStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/spacing_small"
+                android:text="@string/vibration_default"
+                android:textColor="@color/gray_900"
+                android:textSize="@dimen/text_small" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Indikator RECORDING / PAUSED -->
+    <TextView
+        android:id="@+id/tvRecordingStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="@dimen/spacing_medium"
+        android:paddingHorizontal="@dimen/spacing_medium"
+        android:paddingVertical="@dimen/spacing_small"
+        android:text="@string/status_recording"
+        android:textColor="@color/white"
+        android:textSize="@dimen/text_small"
+        android:textStyle="bold"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- ===== BOTTOM PANEL: Data + Tombol Aksi ===== -->
+    <!-- Data Card (Speed, Distance, Vibration) - DITEMPATKAN LEBIH AWAL agar ID bisa dirujuk -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/dataCard"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/spacing_medium"
+        android:layout_marginBottom="@dimen/spacing_medium"
+        app:cardBackgroundColor="@color/surface_container"
+        app:cardCornerRadius="@dimen/card_corner_radius"
+        app:cardElevation="@dimen/elevation_small"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintWidth_percent="0.6">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="@dimen/spacing_medium"
+            android:weightSum="3">
+
+            <!-- Speed -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/speed_label"
+                    android:textColor="@color/gray_500"
+                    android:textSize="@dimen/text_xsmall" />
+
+                <TextView
+                    android:id="@+id/tvSpeed"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0.0 km/h"
+                    android:textColor="@color/gray_900"
+                    android:textSize="@dimen/text_medium"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- Distance -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/distance_label"
+                    android:textColor="@color/gray_500"
+                    android:textSize="@dimen/text_xsmall" />
+
+                <TextView
+                    android:id="@+id/tvDistance"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0.00 km"
+                    android:textColor="@color/gray_900"
+                    android:textSize="@dimen/text_medium"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- Vibration -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/vibration_label"
+                    android:textColor="@color/gray_500"
+                    android:textSize="@dimen/text_xsmall" />
+
+                <TextView
+                    android:id="@+id/tvVibration"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Z: 0.00g"
+                    android:textColor="@color/gray_900"
+                    android:textSize="@dimen/text_medium"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Tombol Add Survey & Center Map (di samping kanan dataCard) -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginEnd="@dimen/spacing_medium"
+        android:layout_marginBottom="@dimen/spacing_medium"
+        app:layout_constraintBottom_toBottomOf="@id/dataCard"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/dataCard">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnAddSurvey"
+            style="@style/Widget.Roadsense.Button"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/button_height"
+            android:layout_marginEnd="@dimen/spacing_small"
+            android:enabled="false"
+            android:text="@string/btn_add_survey" />   <!-- tanpa icon -->
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCenterMap"
+            style="@style/Widget.Roadsense.Button"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/button_height"
+            android:text="@string/btn_center_map" />   <!-- tanpa icon -->
+    </LinearLayout>
+
+    <!-- ===== CONTROL BUTTONS (START/STOP & PAUSE/RESUME) VERTIKAL DI KANAN ===== -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="@dimen/spacing_medium"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toTopOf="@id/dataCard"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/statusCard">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnStartStop"
+            style="@style/Widget.Roadsense.Button"
+            android:layout_width="@dimen/map_button_size"
+            android:layout_height="@dimen/map_button_size"
+            android:layout_marginBottom="@dimen/spacing_small"
+            android:insetLeft="0dp"
+            android:insetTop="0dp"
+            android:insetRight="0dp"
+            android:insetBottom="0dp"
+            android:text="@string/btn_start" />   <!-- tanpa icon -->
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPauseResume"
+            style="@style/Widget.Roadsense.Button"
+            android:layout_width="@dimen/map_button_size"
+            android:layout_height="@dimen/map_button_size"
+            android:enabled="false"
+            android:insetLeft="0dp"
+            android:insetTop="0dp"
+            android:insetRight="0dp"
+            android:insetBottom="0dp"
+            android:text="@string/btn_pause" />   <!-- tanpa icon -->
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,387 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/white"
+    android:paddingBottom="@dimen/margin_large">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/margin_xlarge"
+        android:paddingTop="@dimen/margin_xlarge">
+
+        <!-- Header -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Simpan Segmen Jalan"
+            android:textSize="@dimen/text_xlarge"
+            android:textStyle="bold"
+            android:textColor="@color/primary_text" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Lengkapi data kondisi jalan"
+            android:textSize="@dimen/text_medium"
+            android:textColor="@color/secondary_text"
+            android:layout_marginBottom="@dimen/margin_large" />
+
+        <!-- Confidence Display -->
+        <TextView
+            android:id="@+id/tvConfidence"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Confidence: Sedang"
+            android:textSize="@dimen/text_large"
+            android:textStyle="bold"
+            android:layout_marginBottom="@dimen/margin_small" />
+
+        <TextView
+            android:id="@+id/tvConfidenceHelp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Data cukup akurat"
+            android:textSize="@dimen/text_small"
+            android:textColor="@color/secondary_text"
+            android:layout_marginBottom="@dimen/margin_medium" />
+
+        <!-- Validation Messages -->
+        <TextView
+            android:id="@+id/tvValidationMessages"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="@dimen/margin_medium"
+            android:background="@color/fair_yellow"
+            android:textColor="@color/black"
+            android:textSize="@dimen/text_small"
+            android:visibility="gone"
+            android:layout_marginBottom="@dimen/margin_medium" />
+
+        <!-- Warning Card (Tanpa icon) -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/warningCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardBackgroundColor="@color/fair_yellow"
+            app:cardCornerRadius="@dimen/card_corner_radius"
+            android:visibility="gone"
+            android:layout_marginBottom="@dimen/margin_large">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="@dimen/margin_medium">
+
+                <TextView
+                    android:id="@+id/tvWarning"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="⚠️ Confidence rendah - Pastikan data sudah benar atau ulang perekaman"
+                    android:textColor="@color/black"
+                    android:textSize="@dimen/text_medium" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Road Name Input -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Nama Jalan / Ruas"
+            app:boxStrokeColor="@color/primary"
+            app:boxStrokeWidthFocused="2dp"
+            android:layout_marginBottom="@dimen/margin_medium">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etRoadName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:inputType="textCapWords" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Condition Chips -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Kondisi Jalan"
+            android:textSize="@dimen/text_medium"
+            android:textStyle="bold"
+            android:textColor="@color/primary_text"
+            android:layout_marginBottom="@dimen/margin_medium" />
+
+        <com.google.android.material.chip.ChipGroup
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:singleSelection="true"
+            app:selectionRequired="true"
+            android:layout_marginBottom="@dimen/margin_large">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipGood"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/good"
+                app:chipBackgroundColor="@color/condition_good"
+                app:chipStrokeWidth="0dp"
+                android:textColor="@color/white"
+                app:chipCornerRadius="@dimen/chip_corner_radius" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipModerate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/moderate"
+                app:chipBackgroundColor="@color/condition_moderate"
+                app:chipStrokeWidth="0dp"
+                android:textColor="@color/white"
+                app:chipCornerRadius="@dimen/chip_corner_radius" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipLightDamage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/light_damage"
+                app:chipBackgroundColor="@color/condition_light_damage"
+                app:chipStrokeWidth="0dp"
+                android:textColor="@color/white"
+                app:chipCornerRadius="@dimen/chip_corner_radius" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipHeavyDamage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/heavy_damage"
+                app:chipBackgroundColor="@color/condition_heavy_damage"
+                app:chipStrokeWidth="0dp"
+                android:textColor="@color/white"
+                app:chipCornerRadius="@dimen/chip_corner_radius" />
+
+        </com.google.android.material.chip.ChipGroup>
+
+        <!-- Surface Chips -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Jenis Permukaan"
+            android:textSize="@dimen/text_medium"
+            android:textStyle="bold"
+            android:textColor="@color/primary_text"
+            android:layout_marginBottom="@dimen/margin_medium" />
+
+        <com.google.android.material.chip.ChipGroup
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:singleSelection="true"
+            app:selectionRequired="true"
+            android:layout_marginBottom="@dimen/margin_large">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipAsphalt"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/asphalt"
+                app:chipBackgroundColor="@color/surface_asphalt"
+                app:chipStrokeWidth="0dp"
+                android:textColor="@color/white"
+                app:chipCornerRadius="@dimen/chip_corner_radius" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipConcrete"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/concrete"
+                app:chipBackgroundColor="@color/surface_concrete"
+                app:chipStrokeWidth="0dp"
+                android:textColor="@color/white"
+                app:chipCornerRadius="@dimen/chip_corner_radius" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipGravel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/gravel"
+                app:chipBackgroundColor="@color/surface_gravel"
+                app:chipStrokeWidth="0dp"
+                android:textColor="@color/white"
+                app:chipCornerRadius="@dimen/chip_corner_radius" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipDirt"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/dirt"
+                app:chipBackgroundColor="@color/surface_dirt"
+                app:chipStrokeWidth="0dp"
+                android:textColor="@color/white"
+                app:chipCornerRadius="@dimen/chip_corner_radius" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipOther"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/other"
+                app:chipBackgroundColor="@color/surface_other"
+                app:chipStrokeWidth="0dp"
+                android:textColor="@color/white"
+                app:chipCornerRadius="@dimen/chip_corner_radius" />
+
+        </com.google.android.material.chip.ChipGroup>
+
+        <!-- Severity Slider -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tingkat Keparahan"
+            android:textSize="@dimen/text_medium"
+            android:textStyle="bold"
+            android:textColor="@color/primary_text"
+            android:layout_marginBottom="@dimen/margin_medium" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/sliderSeverity"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:valueFrom="1"
+            android:valueTo="10"
+            android:value="5"
+            android:stepSize="1"
+            app:labelBehavior="floating"
+            app:thumbColor="@color/primary"
+            app:trackColorActive="@color/primary"
+            android:layout_marginBottom="@dimen/margin_large" />
+
+        <!-- Tags Input -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Tag (opsional)"
+            app:boxStrokeColor="@color/primary"
+            app:boxStrokeWidthFocused="2dp"
+            android:layout_marginBottom="@dimen/margin_medium">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etTags"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="1" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Notes Input -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Catatan (opsional)"
+            app:boxStrokeColor="@color/primary"
+            app:boxStrokeWidthFocused="2dp"
+            android:layout_marginBottom="@dimen/margin_large">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etNotes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="3"
+                android:inputType="textMultiLine" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Media Row (Tanpa icon) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="@dimen/margin_large">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnTakePhoto"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="@dimen/margin_medium"
+                android:text="Foto"
+                android:textAllCaps="false" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnRecordVoice"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="@dimen/margin_medium"
+                android:text="Suara"
+                android:textAllCaps="false" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnAddTag"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Tag"
+                android:textAllCaps="false" />
+
+        </LinearLayout>
+
+        <!-- Photo Preview (Tanpa icon) -->
+        <LinearLayout
+            android:id="@+id/photoPreview"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@color/gray_100"
+            android:padding="@dimen/margin_medium"
+            android:visibility="gone"
+            android:layout_marginBottom="@dimen/margin_large">
+
+            <TextView
+                android:id="@+id/tvPhotoCount"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="0/3 foto tersimpan"
+                android:textColor="@color/primary_text"
+                android:textSize="@dimen/text_medium" />
+
+        </LinearLayout>
+
+        <!-- Action Buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="@dimen/margin_medium"
+            android:layout_marginBottom="@dimen/margin_xlarge">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCancel"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="@dimen/margin_medium"
+                android:text="@string/cancel"
+                android:textAllCaps="false" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSave"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/save"
+                android:textAllCaps="false" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</ScrollView>

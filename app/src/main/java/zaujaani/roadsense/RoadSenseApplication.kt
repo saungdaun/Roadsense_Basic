@@ -1,8 +1,17 @@
 package zaujaani.roadsense
 
 import android.app.Application
+import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
 
+/**
+ * RoadSense Application Class
+ *
+ * Initialized dengan:
+ * - Hilt Dependency Injection
+ * - Timber logging
+ */
+@HiltAndroidApp
 class RoadSenseApplication : Application() {
 
     override fun onCreate() {
@@ -13,6 +22,6 @@ class RoadSenseApplication : Application() {
             Timber.plant(Timber.DebugTree())
         }
 
-        Timber.d("RoadSense Application created")
+        Timber.d("🚀 RoadSense Application initialized")
     }
 }
