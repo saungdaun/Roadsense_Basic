@@ -151,7 +151,7 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <!-- ===== BOTTOM PANEL: Data + Tombol Aksi ===== -->
-    <!-- Data Card (Speed, Distance, Vibration) - DITEMPATKAN LEBIH AWAL agar ID bisa dirujuk -->
+    <!-- Data Card (Speed, Distance, Vibration) -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/dataCard"
         android:layout_width="0dp"
@@ -168,6 +168,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:baselineAligned="false"
             android:orientation="horizontal"
             android:padding="@dimen/spacing_medium"
             android:weightSum="3">
@@ -249,7 +250,7 @@
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- Tombol Add Survey & Center Map (di samping kanan dataCard) -->
+    <!-- Tombol Add Survey & Center Map (di samping kanan dataCard) DENGAN ICON -->
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -267,17 +268,23 @@
             android:layout_height="@dimen/button_height"
             android:layout_marginEnd="@dimen/spacing_small"
             android:enabled="false"
-            android:text="@string/btn_add_survey" />   <!-- tanpa icon -->
+            app:icon="@drawable/ic_add"
+            app:iconGravity="textStart"
+            app:iconPadding="@dimen/spacing_small"
+            android:text="@string/btn_add_survey" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCenterMap"
             style="@style/Widget.Roadsense.Button"
             android:layout_width="wrap_content"
             android:layout_height="@dimen/button_height"
-            android:text="@string/btn_center_map" />   <!-- tanpa icon -->
+            app:icon="@drawable/ic_center_map"
+            app:iconGravity="textStart"
+            app:iconPadding="@dimen/spacing_small"
+            android:text="@string/btn_center_map" />
     </LinearLayout>
 
-    <!-- ===== CONTROL BUTTONS (START/STOP & PAUSE/RESUME) VERTIKAL DI KANAN ===== -->
+    <!-- ===== CONTROL BUTTONS (START/STOP & PAUSE/RESUME) VERTIKAL DI KANAN DENGAN ICON ===== -->
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -297,7 +304,10 @@
             android:insetTop="0dp"
             android:insetRight="0dp"
             android:insetBottom="0dp"
-            android:text="@string/btn_start" />   <!-- tanpa icon -->
+            app:icon="@drawable/ic_play_arrow"
+            app:iconGravity="textStart"
+            app:iconPadding="@dimen/spacing_small"
+            android:text="@string/btn_start" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnPauseResume"
@@ -309,7 +319,10 @@
             android:insetTop="0dp"
             android:insetRight="0dp"
             android:insetBottom="0dp"
-            android:text="@string/btn_pause" />   <!-- tanpa icon -->
+            app:icon="@drawable/ic_pause"
+            app:iconGravity="textStart"
+            app:iconPadding="@dimen/spacing_small"
+            android:text="@string/btn_pause" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

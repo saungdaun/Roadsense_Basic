@@ -9,8 +9,8 @@ import kotlinx.coroutines.launch
 import org.osmdroid.util.GeoPoint
 import timber.log.Timber
 import zaujaani.roadsense.core.bluetooth.BluetoothGateway
+import zaujaani.roadsense.core.events.RealtimeRoadsenseBus
 import zaujaani.roadsense.core.gps.GPSGateway
-import zaujaani.roadsense.core.gps.GPSGateway.GPSStatus
 import zaujaani.roadsense.data.local.*
 import zaujaani.roadsense.data.repository.SurveyRepository
 import zaujaani.roadsense.data.repository.TelemetryRepository
@@ -32,8 +32,8 @@ import javax.inject.Inject
 @HiltViewModel
 class MapViewModel @Inject constructor(
     private val surveyEngine: SurveyEngine,
-    private val bluetoothGateway: BluetoothGateway,
-    private val gpsGateway: GPSGateway,
+    private val bus: RealtimeRoadsenseBus,          // ✅ gantikan gateway langsung
+    private val bluetoothGateway: BluetoothGateway, // masih diperlukan untuk sendCommand start/stop
     private val surveyRepository: SurveyRepository,
     private val telemetryRepository: TelemetryRepository,
     private val qualityScoreCalculator: QualityScoreCalculator
@@ -64,54 +64,22 @@ class MapViewModel @Inject constructor(
     // ========== INITIALIZATION ==========
     init {
         Timber.d("🎯 MapViewModel initialized")
-        observeBluetooth()
-        observeIncomingData()
-        observeGps()
-        observeSurveyState()
+        observeBus()            // ✅ subscribe ke bus untuk sensor & GPS
+        observeSurveyState()    // masih perlu untuk session ID & tracking points (dari bus juga)
         loadSavedSegments()
+        checkDeviceReadyState()
     }
 
     // ========== OBSERVERS ==========
 
     /**
-     * Monitor Bluetooth connection status
+     * Subscribe ke RealtimeRoadsenseBus untuk update sensor & GPS
      */
-    private fun observeBluetooth() {
+    private fun observeBus() {
         viewModelScope.launch {
-            bluetoothGateway.connectionState.collect { state ->
-                val connected = state is BluetoothGateway.ConnectionState.Connected
-                _uiState.update { it.copy(esp32Connected = connected) }
-
-                // Update device ready state
-                updateDeviceReadyState()
-            }
-        }
-    }
-
-    /**
-     * Process incoming data from ESP32
-     *
-     * CRITICAL: Use corrected ESP32SensorData parser (NO double conversion!)
-     */
-    private fun observeIncomingData() {
-        viewModelScope.launch {
-            bluetoothGateway.incomingData
-                .filter { it.isNotEmpty() }
-                .collect { rawPacket ->
-                    // Only process during active survey
-                    if (!surveyEngine.isRunning() || surveyEngine.isPaused()) {
-                        return@collect
-                    }
-
-                    // Parse with NEW corrected parser (firmware sends final values in meters/km/h)
-                    val sensorData = ESP32SensorData.fromBluetoothPacket(rawPacket)
-
-                    if (sensorData == null) {
-                        Timber.w("⚠️ Failed to parse packet: $rawPacket")
-                        _uiState.update { it.copy(errorCount = it.errorCount + 1) }
-                        return@collect
-                    }
-
+            bus.sensorData
+                .filterNotNull()
+                .collect { sensorData ->
                     // Store latest data
                     latestSensorData = sensorData
 
@@ -131,44 +99,26 @@ class MapViewModel @Inject constructor(
                     val confidence = calculateConfidence(sensorData)
                     _uiState.update { it.copy(zAxisConfidence = confidence) }
 
-                    // Save to database is handled by TrackingForegroundService
-                    // We just update UI here
                     Timber.v("📊 Sensor: ${sensorData.tripDistanceMeters}m, ${sensorData.currentSpeed}km/h, Z=${sensorData.accelZ}")
                 }
         }
-    }
 
-    /**
-     * Monitor GPS location (position reference only)
-     */
-    private fun observeGps() {
-        // Current location updates
         viewModelScope.launch {
-            gpsGateway.currentLocation.collect { location ->
+            bus.gpsLocation.collect { location ->
                 _uiState.update {
                     it.copy(
                         currentLocation = location,
                         gpsAccuracy = location?.accuracy?.let { acc -> "±${acc.toInt()}m" } ?: "No GPS"
                     )
                 }
-            }
-        }
 
-        // GPS status (signal strength indicator)
-        viewModelScope.launch {
-            gpsGateway.gpsStatus.collect { status ->
-                val strength = when (status) {
-                    is GPSStatus.Available -> {
-                        when {
-                            status.accuracy < 10 -> SignalStrength.EXCELLENT
-                            status.accuracy < 20 -> SignalStrength.GOOD
-                            status.accuracy < 50 -> SignalStrength.FAIR
-                            else -> SignalStrength.POOR
-                        }
-                    }
-                    GPSStatus.Searching -> SignalStrength.SEARCHING
-                    GPSStatus.Disabled -> SignalStrength.NONE
-                    is GPSStatus.Unavailable -> SignalStrength.NONE
+                // Update GPS signal strength
+                val strength = when {
+                    location == null -> SignalStrength.NONE
+                    location.accuracy < 10f -> SignalStrength.EXCELLENT
+                    location.accuracy < 20f -> SignalStrength.GOOD
+                    location.accuracy < 50f -> SignalStrength.FAIR
+                    else -> SignalStrength.POOR
                 }
                 _uiState.update { it.copy(gpsSignalStrength = strength) }
             }
@@ -176,11 +126,11 @@ class MapViewModel @Inject constructor(
     }
 
     /**
-     * Monitor survey state from SurveyEngine
+     * Monitor survey state dari bus (atau dari engine)
      */
     private fun observeSurveyState() {
         viewModelScope.launch {
-            surveyEngine.surveyState.collect { state ->
+            bus.surveyState.collect { state ->
                 _uiState.update {
                     it.copy(
                         isTracking = state is SurveyEngine.SurveyState.Running,
@@ -202,6 +152,21 @@ class MapViewModel @Inject constructor(
                         // Paused or Idle - keep session ID
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * Monitor Bluetooth connection status (masih perlu untuk device ready state)
+     */
+    private fun observeBluetooth() {
+        viewModelScope.launch {
+            bluetoothGateway.connectionState.collect { state ->
+                val connected = state is BluetoothGateway.ConnectionState.Connected
+                _uiState.update { it.copy(esp32Connected = connected) }
+
+                // Update device ready state
+                updateDeviceReadyState()
             }
         }
     }
@@ -297,7 +262,7 @@ class MapViewModel @Inject constructor(
             bluetoothGateway.sendCommand("CMD:START")
 
             // Ensure GPS is tracking
-            gpsGateway.startTracking()
+            // GPS sudah di-start oleh service, tidak perlu di sini
 
             Timber.i("✅ Survey started: Session ID = $newSessionId")
             SurveyStartResult.SUCCESS

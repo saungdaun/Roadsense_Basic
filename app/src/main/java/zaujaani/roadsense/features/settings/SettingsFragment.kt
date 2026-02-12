@@ -7,7 +7,6 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
 import zaujaani.roadsense.databinding.FragmentSettingsBinding
 
 @AndroidEntryPoint
@@ -36,7 +35,8 @@ class SettingsFragment : Fragment() {
 
     private fun setupToolbar() {
         binding.toolbar.setNavigationOnClickListener {
-            requireActivity().onBackPressed()
+            // ✅ FIX: Pakai OnBackPressedDispatcher, gak pakai onBackPressed() deprecated
+            requireActivity().onBackPressedDispatcher.onBackPressed()
         }
     }
 
@@ -95,7 +95,8 @@ class SettingsFragment : Fragment() {
     private fun showAboutDialog() {
         androidx.appcompat.app.AlertDialog.Builder(requireContext())
             .setTitle("RoadSense v1.0")
-            .setMessage("""
+            .setMessage(
+                """
                 RoadSense - Professional Road Survey Logger
                 
                 Features:
@@ -108,7 +109,8 @@ class SettingsFragment : Fragment() {
                 Designed for Indonesian Field Conditions
                 
                 © 2025 Zaujaani Technologies
-            """.trimIndent())
+                """.trimIndent()
+            )
             .setPositiveButton("OK", null)
             .show()
     }

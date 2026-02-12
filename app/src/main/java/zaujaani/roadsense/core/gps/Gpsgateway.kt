@@ -6,23 +6,19 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import timber.log.Timber
+import zaujaani.roadsense.core.events.RealtimeRoadsenseBus
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * GPS Gateway - Mengelola GPS location tracking
- *
- * CATATAN PENTING:
- * GPS adalah BACKUP untuk posisi geografis saja.
- * Jarak utama tetap dari sensor (encoder).
- */
 @Singleton
 class GPSGateway @Inject constructor(
-    private val context: Context
+    @ApplicationContext private val context: Context,
+    private val bus: RealtimeRoadsenseBus
 ) : LocationListener {
 
     private val locationManager: LocationManager? =
@@ -42,112 +38,75 @@ class GPSGateway @Inject constructor(
     }
 
     companion object {
-        private const val MIN_TIME_MS = 1000L // Update every 1 second
-        private const val MIN_DISTANCE_M = 0f  // Update on any movement
+        private const val MIN_TIME_MS = 1000L
+        private const val MIN_DISTANCE_M = 0f
     }
 
-    /**
-     * Start GPS tracking
-     */
     @SuppressLint("MissingPermission")
     fun startTracking() {
         try {
             if (locationManager == null) {
                 _gpsStatus.value = GPSStatus.Disabled
-                Timber.e("❌ LocationManager is null")
                 return
             }
-
             if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
                 _gpsStatus.value = GPSStatus.Disabled
-                Timber.w("⚠️ GPS is disabled")
                 return
             }
-
             _gpsStatus.value = GPSStatus.Searching
-
-            // Request location updates
             locationManager.requestLocationUpdates(
                 LocationManager.GPS_PROVIDER,
                 MIN_TIME_MS,
                 MIN_DISTANCE_M,
                 this
             )
-
-            // Get last known location
-            val lastLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-            if (lastLocation != null) {
-                _currentLocation.value = lastLocation
-                _gpsStatus.value = GPSStatus.Available(lastLocation.accuracy)
-                Timber.d("📍 Last known location: ${lastLocation.latitude}, ${lastLocation.longitude}")
+            locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)?.let {
+                _currentLocation.value = it
+                bus.publishGpsLocation(it)
+                _gpsStatus.value = GPSStatus.Available(it.accuracy)
             }
-
             Timber.d("🛰️ GPS tracking started")
         } catch (e: SecurityException) {
-            Timber.e(e, "❌ GPS permission denied")
             _gpsStatus.value = GPSStatus.Unavailable("Permission denied")
         } catch (e: Exception) {
-            Timber.e(e, "❌ Failed to start GPS tracking")
             _gpsStatus.value = GPSStatus.Unavailable(e.message ?: "Unknown error")
         }
     }
 
-    /**
-     * Stop GPS tracking
-     */
     fun stopTracking() {
         try {
             locationManager?.removeUpdates(this)
             _gpsStatus.value = GPSStatus.Disabled
-            Timber.d("🛑 GPS tracking stopped")
+            bus.publishGpsLocation(null)
+            Timber.d("🛑 GPS stopped")
         } catch (e: Exception) {
-            Timber.e(e, "Error stopping GPS tracking")
+            Timber.e(e, "Error stopping GPS")
         }
     }
 
-    /**
-     * LocationListener callbacks
-     */
     override fun onLocationChanged(location: Location) {
         _currentLocation.value = location
         _gpsStatus.value = GPSStatus.Available(location.accuracy)
-
-        Timber.v(
-            "📍 GPS Update: " +
-                    "lat=${location.latitude}, " +
-                    "lon=${location.longitude}, " +
-                    "acc=${location.accuracy}m, " +
-                    "speed=${location.speed}m/s"
-        )
+        bus.publishGpsLocation(location)
+        Timber.v("📍 GPS: acc=${location.accuracy}m")
     }
 
-    override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
-        Timber.d("GPS status changed: provider=$provider, status=$status")
-    }
-
+    override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) = Unit
     override fun onProviderEnabled(provider: String) {
-        Timber.d("✅ GPS provider enabled: $provider")
         _gpsStatus.value = GPSStatus.Searching
     }
 
     override fun onProviderDisabled(provider: String) {
-        Timber.w("⚠️ GPS provider disabled: $provider")
         _gpsStatus.value = GPSStatus.Disabled
+        bus.publishGpsLocation(null)
     }
 
-    /**
-     * Calculate distance between two locations (in meters)
-     */
     fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Float {
         val results = FloatArray(1)
         Location.distanceBetween(lat1, lon1, lat2, lon2, results)
         return results[0]
     }
 
-    /**
-     * Check if GPS is available
-     */
-    fun isGPSAvailable(): Boolean {
-        return locationManager?.isProviderEnabled(LocationManager.GPS_PROVIDER) == true
-    }
+    fun isGPSAvailable(): Boolean =
+        locationManager?.isProviderEnabled(LocationManager.GPS_PROVIDER) == true
 }

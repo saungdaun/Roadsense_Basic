@@ -350,6 +350,8 @@
 
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="tracking_service_description">Mengelola koneksi Bluetooth dengan ESP32, merekam data sensor, dan melacak posisi GPS untuk survey jalan. Service ini tetap berjalan saat aplikasi di latar belakang.</string>
+
     <string name="action_edit">Edit</string>
     <string name="action_delete">Delete</string>
 </resources>

@@ -44,9 +44,21 @@
         <item name="chipCornerRadius">@dimen/chip_corner_radius</item>
     </style>
 
-    <!-- Splash Theme -->
-    <style name="Theme.Roadsense.Splash" parent="Theme.Roadsense">
-        <item name="android:windowBackground">@color/primary</item>
+    <style name="Theme.Roadsense.Splash" parent="Theme.SplashScreen">
+        <!-- Warna latar belakang splash -->
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+
+        <!-- Ikon animasi di tengah (bisa vector drawable) -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_logo</item>
+
+        <!-- Durasi animasi ikon (ms) -->
+        <item name="windowSplashScreenAnimationDuration">1000</item>
+
+        <!-- Warna setelah ikon hilang (opsional) -->
+        <item name="windowSplashScreenIconBackgroundColor">@color/splash_icon_bg</item>
+
+        <!-- Tema yang dipakai setelah splash selesai -->
+        <item name="postSplashScreenTheme">@style/Theme.Roadsense</item>
     </style>
 
     <!-- Bottom Sheet Theme -->

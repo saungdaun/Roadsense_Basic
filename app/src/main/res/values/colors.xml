@@ -159,6 +159,8 @@
     <color name="vibration_spike">#991B1B</color>
 
     <color name="gps_very_poor">#6B7280</color>
+    <color name="splash_background">#FF6200EE</color>   <!-- ganti sesuai brand lo -->
+    <color name="splash_icon_bg">#FFFFFF</color>        <!-- optional, buat background ikon -->
 
 
 </resources>

@@ -260,9 +260,6 @@ class TrackingForegroundService : Service() {
                 try {
                     telemetryRepository.insertTelemetryRaw(telemetryRaw)
 
-                    // Update real-time display
-                    telemetryRepository.updateLatestTelemetry(telemetryRaw)
-
                     // Update notification
                     updateNotification(sensorData, gpsLocation)
 

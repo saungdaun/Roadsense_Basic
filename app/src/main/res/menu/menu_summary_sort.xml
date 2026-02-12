@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_sort_date_desc"
+        android:title="Tanggal (Terbaru)"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_sort_date_asc"
+        android:title="Tanggal (Terlama)"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_sort_distance_desc"
+        android:title="Jarak (Terpanjang)"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_sort_distance_asc"
+        android:title="Jarak (Terpendek)"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_sort_severity_desc"
+        android:title="Kerusakan (Tertinggi)"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_sort_severity_asc"
+        android:title="Kerusakan (Terendah)"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_sort_speed_desc"
+        android:title="Kecepatan (Tertinggi)"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_sort_speed_asc"
+        android:title="Kecepatan (Terendah)"
+        app:showAsAction="never" />
+</menu>

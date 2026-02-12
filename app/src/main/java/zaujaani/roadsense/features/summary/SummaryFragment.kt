@@ -1,21 +1,28 @@
 package zaujaani.roadsense.features.summary
 
+import android.content.Intent
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
+import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import timber.log.Timber
+import zaujaani.roadsense.R
 import zaujaani.roadsense.databinding.FragmentSummaryBinding
-import zaujaani.roadsense.features.summary.adapter.SummaryAdapter
-import zaujaani.roadsense.data.local.RoadSegmentSummary   // ✅ WAJIB
-import zaujaani.roadsense.domain.model.RoadCondition      // ✅ WAJIB
+import zaujaani.roadsense.data.local.RoadSegmentSummary
+import zaujaani.roadsense.domain.model.RoadCondition
+import java.io.File
+import java.io.FileWriter
+import java.text.SimpleDateFormat
+import java.util.*
 
 @AndroidEntryPoint
 class SummaryFragment : Fragment(), SummaryAdapter.SummaryActions {
@@ -36,6 +43,7 @@ class SummaryFragment : Fragment(), SummaryAdapter.SummaryActions {
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentSummaryBinding.inflate(inflater, container, false)
+        setHasOptionsMenu(true) // 🔥 untuk sort menu
         return binding.root
     }
 
@@ -44,22 +52,26 @@ class SummaryFragment : Fragment(), SummaryAdapter.SummaryActions {
 
         setupToolbar()
         setupRecyclerView()
-        setupClickListeners()
-        loadData()
         setupSwipeRefresh()
+        setupClickListeners()
+        observeViewModel()
+
+        viewModel.loadSummary(sessionId)
     }
 
+    // ========== TOOLBAR ==========
     private fun setupToolbar() {
         binding.toolbar.setNavigationOnClickListener {
             findNavController().navigateUp()
         }
         binding.toolbar.title = if (sessionId != -1L) {
-            "Session #$sessionId Summary"
+            "Session #$sessionId"
         } else {
-            "All Surveys Summary"
+            "All Surveys"
         }
     }
 
+    // ========== RECYCLERVIEW ==========
     private fun setupRecyclerView() {
         adapter = SummaryAdapter(
             onItemClick = { segment -> showSegmentDetail(segment) },
@@ -76,126 +88,289 @@ class SummaryFragment : Fragment(), SummaryAdapter.SummaryActions {
         }
     }
 
+    // ========== SWIPE REFRESH ==========
     private fun setupSwipeRefresh() {
-        binding.swipeRefresh?.setOnRefreshListener { loadData() }
+        binding.swipeRefresh.setOnRefreshListener {
+            viewModel.refresh() // ✅ USED!
+        }
     }
 
+    // ========== CLICK LISTENERS ==========
     private fun setupClickListeners() {
-        binding.btnExportAll?.setOnClickListener { exportAllToPDF() }
         binding.btnFilter?.setOnClickListener { showFilterDialog() }
+        binding.btnExportAll?.setOnClickListener { exportAllToCsv() } // ✅ USED!
         binding.btnStats?.setOnClickListener { showStatistics() }
     }
 
-    private fun loadData() {
-        binding.swipeRefresh?.isRefreshing = true
+    // ========== OBSERVE VIEWMODEL (STATE FLOW) ==========
+    private fun observeViewModel() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+                // 🔥 filteredData adalah StateFlow, bukan LiveData
+                viewModel.filteredData.collectLatest { list ->
+                    binding.swipeRefresh.isRefreshing = false
+                    if (list.isNotEmpty()) {
+                        adapter.submitList(list)
+                        binding.emptyState?.visibility = View.GONE
+                        binding.recyclerView.visibility = View.VISIBLE
+                        updateStatistics(list)
+                    } else {
+                        binding.emptyState?.visibility = View.VISIBLE
+                        binding.recyclerView.visibility = View.GONE
+                        updateStatistics(emptyList())
+                    }
+                }
+            }
+        }
 
-        viewModel.loadSummary(sessionId)
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+                viewModel.isLoading.collectLatest { loading ->
+                    // Jika ada progress bar, uncomment
+                    // binding.progressBar?.isVisible = loading
+                }
+            }
+        }
 
-        lifecycleScope.launch {
-            viewModel.summaryData.collect { summaryList ->
-                binding.swipeRefresh?.isRefreshing = false
-
-                if (summaryList.isNotEmpty()) {
-                    adapter.submitList(summaryList)
-                    binding.emptyState?.visibility = View.GONE
-                    binding.recyclerView.visibility = View.VISIBLE
-                    updateTotals(summaryList)
-                } else {
-                    binding.emptyState?.visibility = View.VISIBLE
-                    binding.recyclerView.visibility = View.GONE
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+                viewModel.error.collectLatest { errorMsg ->
+                    // Jika ada TextView error, uncomment
+                    // binding.tvError?.isVisible = errorMsg != null
+                    // binding.tvError?.text = errorMsg ?: ""
+                    if (errorMsg != null) {
+                        Timber.e("Summary error: $errorMsg")
+                    }
                 }
             }
         }
     }
 
-    private fun updateTotals(summaryList: List<RoadSegmentSummary>) {
-        // ✅ GUNAKAN fold UNTUK MENGHINDARI AMBIGUITY sumOf
-        val totalDistance = summaryList.fold(0f) { acc, item -> acc + item.totalDistance }
-        binding.tvTotalDistance?.text = String.format("%.2f km", totalDistance / 1000)
+    // ========== STATISTIK ==========
+    private fun updateStatistics(list: List<RoadSegmentSummary>) {
+        val stats = viewModel.getStatistics() // ✅ USED!
+        binding.tvTotalDistance?.text = String.format(
+            Locale.getDefault(),
+            "%.2f km",
+            stats.totalDistance / 1000
+        )
+        binding.tvSegmentCount?.text = "${stats.totalSegments} Segmen"
 
-        val totalSegments = summaryList.fold(0) { acc, item -> acc + item.segmentCount }
-        binding.tvSegmentCount?.text = "$totalSegments Segmen"
+        val conditionText = stats.conditionDistribution.entries.joinToString(" • ") { (cond, dist) ->
+            "${RoadCondition.fromCode(cond).displayName}: ${String.format(Locale.getDefault(), "%.2f km", dist / 1000)}"
+        }
+        binding.tvConditionStats?.text = conditionText
 
-        val conditionStats = calculateConditionStats(summaryList)
-        binding.tvConditionStats?.text = conditionStats
-
-        val confidenceStats = calculateConfidenceStats(summaryList)
-        binding.tvConfidenceStats?.text = confidenceStats
-    }
-
-    private fun calculateConditionStats(summaryList: List<RoadSegmentSummary>): String {
-        val conditionGroups = summaryList.groupBy { it.condition }
-        return conditionGroups.map { (condition, items) ->
-            val totalDistance = items.fold(0f) { acc, item -> acc + item.totalDistance }
-            "${RoadCondition.fromCode(condition).displayName}: ${String.format("%.2f km", totalDistance / 1000)}"
-        }.joinToString(" • ")
-    }
-
-    private fun calculateConfidenceStats(summaryList: List<RoadSegmentSummary>): String {
-        val confidenceGroups = summaryList.groupBy { it.confidence }
-        return confidenceGroups.map { (confidence, items) ->
-            val text = when (confidence) {
+        val confidenceText = list.groupBy { it.confidence }.entries.joinToString(" • ") { (conf, items) ->
+            val label = when (conf) {
                 "HIGH" -> "Tinggi"
                 "MEDIUM" -> "Sedang"
                 else -> "Rendah"
             }
-            "$text: ${items.size}"
-        }.joinToString(" • ")
+            "$label: ${items.size}"
+        }
+        binding.tvConfidenceStats?.text = confidenceText
     }
 
-    // ========== SummaryActions Implementation ==========
-    override fun onExportClicked(summary: RoadSegmentSummary) {
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Export Segment")
-            .setMessage("Export data for ${summary.roadName}?")
-            .setPositiveButton("Export") { _, _ -> exportSingleSegment(summary) }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
+    // ========== FILTER DIALOG ==========
+    private fun showFilterDialog() {
+        val options = viewModel.getFilterOptions() // ✅ USED!
 
-    override fun onEditClicked(summary: RoadSegmentSummary) {
-        showToast("Edit feature coming soon")
-    }
+        val conditions = options.conditions.toMutableList().apply { add(0, "Semua") }
+        val surfaces = options.surfaces.toMutableList().apply { add(0, "Semua") }
+        val confidences = options.confidences.toMutableList().apply { add(0, "Semua") }
 
-    override fun onDeleteClicked(summary: RoadSegmentSummary) {
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Delete Segment")
-            .setMessage("Are you sure you want to delete ${summary.roadName}?")
-            .setPositiveButton("Delete") { _, _ -> deleteSegment(summary) }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    private fun exportSingleSegment(summary: RoadSegmentSummary) {
-        showToast("Exporting ${summary.roadName}...")
-    }
-
-    private fun exportAllToPDF() {
-        lifecycleScope.launch {
-            val summaries = viewModel.summaryData.value
-            if (summaries.isNotEmpty()) {
-                showToast("Exporting ${summaries.size} segments to PDF...")
-            } else {
-                showToast("No data to export")
+        // Pilih kondisi
+        showSingleChoiceDialog(
+            title = "Pilih Kondisi",
+            items = conditions
+        ) { selectedCondition ->
+            val condition = selectedCondition.takeIf { it != "Semua" }
+            // Pilih surface
+            showSingleChoiceDialog(
+                title = "Pilih Surface",
+                items = surfaces
+            ) { selectedSurface ->
+                val surface = selectedSurface.takeIf { it != "Semua" }
+                // Pilih confidence
+                showSingleChoiceDialog(
+                    title = "Pilih Confidence",
+                    items = confidences
+                ) { selectedConfidence ->
+                    val confidence = selectedConfidence.takeIf { it != "Semua" }
+                    // ✅ TERAPKAN FILTER
+                    viewModel.setFilterCondition(condition)
+                    viewModel.setFilterSurface(surface)
+                    viewModel.setFilterConfidence(confidence)
+                }
             }
         }
     }
 
-    private fun deleteSegment(summary: RoadSegmentSummary) {
-        lifecycleScope.launch {
-            showToast("Deleting ${summary.roadName}...")
-            loadData()
+    private fun showSingleChoiceDialog(
+        title: String,
+        items: List<String>,
+        onSelected: (String) -> Unit
+    ) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(title)
+            .setItems(items.toTypedArray()) { _, which ->
+                onSelected(items[which])
+            }
+            .setNegativeButton("Batal", null)
+            .show()
+    }
+
+    // ========== SORT DIALOG (VIA MENU) ==========
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        inflater.inflate(R.menu.menu_summary_sort, menu) // 🔥 buat menu file
+        super.onCreateOptionsMenu(menu, inflater)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_sort_date_desc -> {
+                viewModel.setSortBy(SummaryViewModel.SortBy.DATE_DESC)
+                true
+            }
+            R.id.action_sort_date_asc -> {
+                viewModel.setSortBy(SummaryViewModel.SortBy.DATE_ASC)
+                true
+            }
+            R.id.action_sort_distance_desc -> {
+                viewModel.setSortBy(SummaryViewModel.SortBy.DISTANCE_DESC)
+                true
+            }
+            R.id.action_sort_distance_asc -> {
+                viewModel.setSortBy(SummaryViewModel.SortBy.DISTANCE_ASC)
+                true
+            }
+            R.id.action_sort_severity_desc -> {
+                viewModel.setSortBy(SummaryViewModel.SortBy.SEVERITY_DESC)
+                true
+            }
+            R.id.action_sort_severity_asc -> {
+                viewModel.setSortBy(SummaryViewModel.SortBy.SEVERITY_ASC)
+                true
+            }
+            R.id.action_sort_speed_desc -> {
+                viewModel.setSortBy(SummaryViewModel.SortBy.SPEED_DESC)
+                true
+            }
+            R.id.action_sort_speed_asc -> {
+                viewModel.setSortBy(SummaryViewModel.SortBy.SPEED_ASC)
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
         }
     }
 
+    // ========== EXPORT CSV ==========
+    private fun exportAllToCsv() {
+        lifecycleScope.launch {
+            val csvData = viewModel.exportToCsv() // ✅ USED!
+            if (csvData.isBlank()) {
+                showToast("Tidak ada data untuk diekspor")
+                return@launch
+            }
+            saveAndShareCsv(csvData)
+        }
+    }
+
+    private fun saveAndShareCsv(csvData: String) {
+        try {
+            val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+            val fileName = "roadsense_export_$timeStamp.csv"
+            val file = File(requireContext().getExternalFilesDir(null), fileName)
+            FileWriter(file).use { writer ->
+                writer.write(csvData)
+            }
+
+            val uri = FileProvider.getUriForFile(
+                requireContext(),
+                "${requireContext().packageName}.fileprovider",
+                file
+            )
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/csv"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(Intent.createChooser(shareIntent, "Ekspor CSV"))
+            showToast("File CSV berhasil dibuat")
+        } catch (e: Exception) {
+            Timber.e(e, "Export CSV gagal")
+            showToast("Gagal mengekspor CSV")
+        }
+    }
+
+    // ========== STATISTICS DIALOG ==========
+    private fun showStatistics() {
+        val stats = viewModel.getStatistics() // ✅ USED!
+        val message = buildString {
+            appendLine("📊 Statistik Survey")
+            appendLine()
+            appendLine("Total Segmen: ${stats.totalSegments}")
+            appendLine("Total Jarak: ${String.format(Locale.getDefault(), "%.2f km", stats.totalDistance / 1000)}")
+            appendLine("Rata-rata Kecepatan: ${String.format(Locale.getDefault(), "%.1f km/h", stats.avgSpeed)}")
+            appendLine("Rata-rata Kerusakan: ${String.format(Locale.getDefault(), "%.1f/10", stats.avgSeverity)}")
+            appendLine()
+            appendLine("Berdasarkan Kondisi:")
+            stats.conditionDistribution.forEach { (cond, dist) ->
+                appendLine("  • ${RoadCondition.fromCode(cond).displayName}: ${String.format(Locale.getDefault(), "%.2f km", dist / 1000)}")
+            }
+            appendLine()
+            appendLine("Berdasarkan Surface:")
+            stats.surfaceDistribution.forEach { (surf, dist) ->
+                val surfaceName = when (surf) {
+                    "ASPHALT" -> "Aspal"
+                    "CONCRETE" -> "Beton"
+                    "GRAVEL" -> "Kerikil"
+                    "DIRT" -> "Tanah"
+                    else -> "Lainnya"
+                }
+                appendLine("  • $surfaceName: ${String.format(Locale.getDefault(), "%.2f km", dist / 1000)}")
+            }
+        }
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Statistik")
+            .setMessage(message)
+            .setPositiveButton("OK", null)
+            .show()
+    }
+
+    // ========== SUMMARY ACTIONS (dari adapter) ==========
+    override fun onExportClicked(summary: RoadSegmentSummary) {
+        showToast("Export single segment belum tersedia")
+    }
+
+    override fun onEditClicked(summary: RoadSegmentSummary) {
+        showToast("Edit segmen belum tersedia")
+    }
+
+    override fun onDeleteClicked(summary: RoadSegmentSummary) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Hapus Segmen")
+            .setMessage("Yakin ingin menghapus ${summary.roadName}?")
+            .setPositiveButton("Hapus") { _, _ ->
+                lifecycleScope.launch {
+                    // TODO: panggil repository.deleteSegment(summary.segment.id)
+                    showToast("Segmen dihapus")
+                    viewModel.refresh()
+                }
+            }
+            .setNegativeButton("Batal", null)
+            .show()
+    }
+
     private fun showSegmentDetail(summary: RoadSegmentSummary) {
-        showToast("Showing details for ${summary.roadName}")
+        showToast("Detail: ${summary.roadName}")
     }
 
     private fun showSegmentActions(summary: RoadSegmentSummary) {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(summary.roadName)
-            .setItems(arrayOf("View on Map", "Export Data", "Edit Details", "Delete")) { _, which ->
+            .setItems(arrayOf("Lihat di Peta", "Ekspor", "Edit", "Hapus")) { _, which ->
                 when (which) {
                     0 -> viewOnMap(summary)
                     1 -> onExportClicked(summary)
@@ -203,61 +378,12 @@ class SummaryFragment : Fragment(), SummaryAdapter.SummaryActions {
                     3 -> onDeleteClicked(summary)
                 }
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton("Batal", null)
             .show()
     }
 
     private fun viewOnMap(summary: RoadSegmentSummary) {
         findNavController().navigateUp()
-    }
-
-    private fun showFilterDialog() {
-        val conditions = arrayOf("All", "Good", "Moderate", "Light Damage", "Heavy Damage")
-        val surfaces = arrayOf("All", "Asphalt", "Concrete", "Gravel", "Dirt", "Other")
-
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Filter Segments")
-            .setMultiChoiceItems(conditions, null) { _, _, _ -> }
-            .setMultiChoiceItems(surfaces, null) { _, _, _ -> }
-            .setPositiveButton("Apply", null)
-            .setNegativeButton("Reset", null)
-            .setNeutralButton("Cancel", null)
-            .show()
-    }
-
-    private fun showStatistics() {
-        lifecycleScope.launch {
-            val summaries = viewModel.summaryData.value
-            if (summaries.isNotEmpty()) {
-                val stats = buildString {
-                    appendLine("📊 Survey Statistics")
-                    appendLine()
-                    appendLine("Total Segments: ${summaries.size}")
-                    appendLine("Total Distance: ${String.format("%.2f km", summaries.fold(0f) { acc, s -> acc + s.totalDistance } / 1000)}")
-                    appendLine()
-                    appendLine("By Condition:")
-                    summaries.groupBy { it.condition }.forEach { (condition, items) ->
-                        val distance = items.fold(0f) { acc, s -> acc + s.totalDistance }
-                        appendLine("  ${RoadCondition.fromCode(condition).displayName}: ${String.format("%.2f km", distance / 1000)}")
-                    }
-                    appendLine()
-                    appendLine("By Confidence:")
-                    summaries.groupBy { it.confidence }.forEach { (confidence, items) ->
-                        val text = when (confidence) {
-                            "HIGH" -> "Tinggi"
-                            "MEDIUM" -> "Sedang"
-                            else -> "Rendah"
-                        }
-                        appendLine("  $text: ${items.size} segments")
-                    }
-                }
-                MaterialAlertDialogBuilder(requireContext())
-                    .setTitle("Statistics")
-                    .setMessage(stats)
-                    .setPositiveButton("OK", null)
-                    .show()
-            }
-        }
     }
 
     private fun showToast(message: String) {

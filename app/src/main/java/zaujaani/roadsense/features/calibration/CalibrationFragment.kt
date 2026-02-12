@@ -1,14 +1,21 @@
 package zaujaani.roadsense.features.calibration
 
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
+import timber.log.Timber
 import zaujaani.roadsense.databinding.FragmentCalibrationBinding
+import zaujaani.roadsense.data.local.DeviceCalibration
 
 @AndroidEntryPoint
 class CalibrationFragment : Fragment() {
@@ -30,172 +37,169 @@ class CalibrationFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         setupToolbar()
-        setupForm()
-        setupObservers()
-        loadCalibration()
+        setupInputListeners()
+        setupSaveButton()
+        observeViewModel()
+
+        // Muat kalibrasi aktif
+        viewModel.loadCalibration() // ✅ USED!
     }
 
     private fun setupToolbar() {
         binding.toolbar.setNavigationOnClickListener {
-            // Use OnBackPressedDispatcher instead of deprecated onBackPressed()
             requireActivity().onBackPressedDispatcher.onBackPressed()
         }
+        binding.toolbar.title = "Kalibrasi ESP32"
     }
 
-    private fun setupForm() {
-        // Wheel diameter unit selection
-        binding.radioGroupUnits.setOnCheckedChangeListener { _, checkedId ->
-            when (checkedId) {
-                binding.radioCm.id -> updateUnit("cm")
-                binding.radioInch.id -> updateUnit("inch")
+    private fun setupInputListeners() {
+        // Listener untuk update ringkasan otomatis setiap kali input berubah
+        val textWatcher = object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                updateSummary()
             }
         }
 
-        // Save button
-        binding.btnSaveCalibration.setOnClickListener {
+        binding.etDeviceName.addTextChangedListener(textWatcher)
+        binding.etDiameter.addTextChangedListener(textWatcher)
+        binding.etPulsesPerRotation.addTextChangedListener(textWatcher)
+
+        // Spinner / radio untuk unit (asumsi pakai RadioGroup)
+        binding.radioGroupUnit.setOnCheckedChangeListener { _, _ ->
+            updateSummary()
+        }
+    }
+
+    private fun setupSaveButton() {
+        binding.btnSave.setOnClickListener {
             saveCalibration()
         }
-
-        // Test button
-        binding.btnTestCalibration.setOnClickListener {
-            testCalibration()
-        }
     }
 
-    private fun updateUnit(unit: String) {
-        when (unit) {
-            "cm" -> {
-                binding.tilWheelDiameter.hint = "Diameter Roda (cm)"
-                binding.tilWheelDiameter.suffixText = "cm"
-            }
-            "inch" -> {
-                binding.tilWheelDiameter.hint = "Diameter Roda (inch)"
-                binding.tilWheelDiameter.suffixText = "inch"
-            }
-        }
-    }
-
-    private fun loadCalibration() {
-        viewModel.loadCalibration()
-    }
-
-    private fun setupObservers() {
+    private fun observeViewModel() {
         viewModel.calibrationState.observe(viewLifecycleOwner) { state ->
             when (state) {
                 is CalibrationViewModel.CalibrationState.Loading -> {
                     binding.progressBar.visibility = View.VISIBLE
+                    binding.btnSave.isEnabled = false
                 }
                 is CalibrationViewModel.CalibrationState.Loaded -> {
                     binding.progressBar.visibility = View.GONE
                     state.calibration?.let { calibration ->
-                        binding.etDeviceName.setText(calibration.deviceName)
-                        binding.etWheelDiameter.setText(calibration.wheelDiameter.toString())
-                        binding.etPulsesPerRotation.setText(calibration.pulsesPerRotation.toString())
-
-                        when (calibration.wheelDiameterUnit) {
-                            "cm" -> binding.radioCm.isChecked = true
-                            "inch" -> binding.radioInch.isChecked = true
-                        }
-
-                        binding.etVehicleType.setText(calibration.vehicleType ?: "")
-                        binding.etTirePressure.setText(calibration.tirePressure?.toString() ?: "")
-                        binding.etLoadWeight.setText(calibration.loadWeight?.toString() ?: "")
+                        populateFields(calibration)
                     }
-                }
-                is CalibrationViewModel.CalibrationState.Error -> {
-                    binding.progressBar.visibility = View.GONE
-                    Snackbar.make(binding.root, state.message, Snackbar.LENGTH_LONG).show()
                 }
                 is CalibrationViewModel.CalibrationState.Saved -> {
                     binding.progressBar.visibility = View.GONE
-                    Snackbar.make(binding.root, "Kalibrasi disimpan", Snackbar.LENGTH_SHORT).show()
+                    binding.btnSave.isEnabled = true
+                    Snackbar.make(binding.root, "✅ Kalibrasi berhasil disimpan", Snackbar.LENGTH_SHORT).show()
+                }
+                is CalibrationViewModel.CalibrationState.Error -> {
+                    binding.progressBar.visibility = View.GONE
+                    binding.btnSave.isEnabled = true
+                    Snackbar.make(binding.root, "❌ ${state.message}", Snackbar.LENGTH_LONG).show()
                 }
             }
+        }
+    }
+
+    private fun populateFields(calibration: DeviceCalibration) {
+        binding.etDeviceName.setText(calibration.deviceName)
+        binding.etDiameter.setText(calibration.wheelDiameter.toString())
+        // Set unit radio
+        when (calibration.wheelDiameterUnit) {
+            "cm" -> binding.radioCm.isChecked = true
+            "mm" -> binding.radioMm.isChecked = true
+            else -> binding.radioMeter.isChecked = true
+        }
+        binding.etPulsesPerRotation.setText(calibration.pulsesPerRotation.toString())
+        binding.etVehicleType.setText(calibration.vehicleType ?: "")
+        binding.etTirePressure.setText(calibration.tirePressure?.toString() ?: "")
+        binding.etLoadWeight.setText(calibration.loadWeight?.toString() ?: "")
+        binding.etNotes.setText(calibration.notes ?: "")
+    }
+
+    private fun updateSummary() {
+        val diameterStr = binding.etDiameter.text.toString()
+        val pulsesStr = binding.etPulsesPerRotation.text.toString()
+
+        if (diameterStr.isEmpty() || pulsesStr.isEmpty()) {
+            binding.tvSummary.text = "Masukkan diameter dan pulsa per putaran"
+            return
+        }
+
+        try {
+            val diameter = diameterStr.toFloat()
+            val pulses = pulsesStr.toInt()
+            val unit = when (binding.radioGroupUnit.checkedRadioButtonId) {
+                binding.radioCm.id -> "cm"
+                binding.radioMm.id -> "mm"
+                else -> "m"
+            }
+
+            // ✅ PANGGIL fungsi ViewModel yang sebelumnya "never used"
+            val distancePerPulse = viewModel.calculateDistancePerPulse(diameter, unit, pulses)
+            val summary = viewModel.getCalibrationSummary(diameter, unit, pulses)
+
+            // Tampilkan ringkasan
+            binding.tvSummary.text = """
+                📏 Keliling roda: ${summary["circumference_cm"]}
+                ⚙️ Jarak per pulsa: ${summary["distance_per_pulse_mm"]}
+                🔄 Jarak per 1000 pulsa: ${summary["distance_per_1000_pulses_m"]}
+                📊 Presisi: ${String.format("%.4f", distancePerPulse)} m/pulsa
+            """.trimIndent()
+
+        } catch (e: NumberFormatException) {
+            binding.tvSummary.text = "Format angka tidak valid"
         }
     }
 
     private fun saveCalibration() {
         val deviceName = binding.etDeviceName.text.toString().trim()
-        val wheelDiameterText = binding.etWheelDiameter.text.toString().trim()
-        val pulsesText = binding.etPulsesPerRotation.text.toString().trim()
-
         if (deviceName.isEmpty()) {
-            binding.tilDeviceName.error = "Nama device harus diisi"
+            Snackbar.make(binding.root, "Nama device tidak boleh kosong", Snackbar.LENGTH_SHORT).show()
             return
         }
 
-        if (wheelDiameterText.isEmpty()) {
-            binding.tilWheelDiameter.error = "Diameter roda harus diisi"
+        val diameterStr = binding.etDiameter.text.toString()
+        val pulsesStr = binding.etPulsesPerRotation.text.toString()
+
+        if (diameterStr.isEmpty() || pulsesStr.isEmpty()) {
+            Snackbar.make(binding.root, "Diameter dan pulsa per putaran wajib diisi", Snackbar.LENGTH_SHORT).show()
             return
         }
 
-        if (pulsesText.isEmpty()) {
-            binding.tilPulsesPerRotation.error = "Pulses per rotation harus diisi"
-            return
+        try {
+            val diameter = diameterStr.toFloat()
+            val pulses = pulsesStr.toInt()
+            val unit = when (binding.radioGroupUnit.checkedRadioButtonId) {
+                binding.radioCm.id -> "cm"
+                binding.radioMm.id -> "mm"
+                else -> "m"
+            }
+
+            val vehicleType = binding.etVehicleType.text.toString().takeIf { it.isNotBlank() }
+            val tirePressure = binding.etTirePressure.text.toString().toFloatOrNull()
+            val loadWeight = binding.etLoadWeight.text.toString().toFloatOrNull()
+            val notes = binding.etNotes.text.toString().takeIf { it.isNotBlank() }
+
+            // ✅ PANGGIL fungsi saveCalibration
+            viewModel.saveCalibration(
+                deviceName = deviceName,
+                wheelDiameter = diameter,
+                wheelDiameterUnit = unit,
+                pulsesPerRotation = pulses,
+                vehicleType = vehicleType,
+                tirePressure = tirePressure,
+                loadWeight = loadWeight,
+                notes = notes
+            )
+
+        } catch (e: NumberFormatException) {
+            Snackbar.make(binding.root, "Diameter dan pulsa harus berupa angka", Snackbar.LENGTH_SHORT).show()
         }
-
-        val wheelDiameter = wheelDiameterText.toFloatOrNull()
-        val pulsesPerRotation = pulsesText.toIntOrNull()
-
-        if (wheelDiameter == null || wheelDiameter <= 0) {
-            binding.tilWheelDiameter.error = "Diameter tidak valid"
-            return
-        }
-
-        if (pulsesPerRotation == null || pulsesPerRotation <= 0) {
-            binding.tilPulsesPerRotation.error = "Pulses tidak valid"
-            return
-        }
-
-        val unit = if (binding.radioCm.isChecked) "cm" else "inch"
-        val vehicleType = binding.etVehicleType.text.toString().trim().ifEmpty { null }
-        val tirePressure = binding.etTirePressure.text.toString().trim().toFloatOrNull()
-        val loadWeight = binding.etLoadWeight.text.toString().trim().toFloatOrNull()
-        val notes = binding.etNotes.text.toString().trim().ifEmpty { null }
-
-        viewModel.saveCalibration(
-            deviceName = deviceName,
-            wheelDiameter = wheelDiameter,
-            wheelDiameterUnit = unit,
-            pulsesPerRotation = pulsesPerRotation,
-            vehicleType = vehicleType,
-            tirePressure = tirePressure,
-            loadWeight = loadWeight,
-            notes = notes
-        )
-    }
-
-    private fun testCalibration() {
-        val wheelDiameterText = binding.etWheelDiameter.text.toString().trim()
-        val pulsesText = binding.etPulsesPerRotation.text.toString().trim()
-
-        if (wheelDiameterText.isEmpty() || pulsesText.isEmpty()) {
-            Snackbar.make(binding.root, "Isi diameter dan pulses terlebih dahulu", Snackbar.LENGTH_SHORT).show()
-            return
-        }
-
-        val wheelDiameter = wheelDiameterText.toFloat()
-        val pulsesPerRotation = pulsesText.toInt()
-        val unit = if (binding.radioCm.isChecked) "cm" else "inch"
-
-        val summary = viewModel.getCalibrationSummary(wheelDiameter, unit, pulsesPerRotation)
-
-        val message = """
-            📏 Hasil Kalibrasi:
-            
-            Diameter: ${summary["diameter"]}
-            Keliling: ${summary["circumference"]}
-            Pulses/rotasi: ${summary["pulses_per_rotation"]}
-            Jarak/pulse: ${summary["distance_per_pulse"]}
-            
-            Setiap 1000 pulses = ${summary["distance_per_1000_pulses"]}
-        """.trimIndent()
-
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
-            .setTitle("Test Kalibrasi")
-            .setMessage(message)
-            .setPositiveButton("OK", null)
-            .show()
     }
 
     override fun onDestroyView() {

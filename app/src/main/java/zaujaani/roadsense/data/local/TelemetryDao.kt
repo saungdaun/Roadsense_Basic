@@ -7,47 +7,20 @@ import kotlinx.coroutines.flow.Flow
 interface TelemetryDao {
 
     @Insert
-    suspend fun insertTelemetry(telemetry: TelemetryRaw): Long
+    suspend fun insertTelemetryRaw(telemetry: TelemetryRaw): Long
 
     @Insert
-    suspend fun insertBatchTelemetry(telemetryList: List<TelemetryRaw>)
+    suspend fun insertTelemetryRawBatch(telemetryList: List<TelemetryRaw>)
 
-    @Query("SELECT * FROM telemetry_raw WHERE sessionId = :sessionId ORDER BY timestamp")
-    fun getTelemetryBySession(sessionId: Long): Flow<List<TelemetryRaw>>
+    @Query("SELECT * FROM telemetry_raw WHERE sessionId = :sessionId ORDER BY timestamp ASC")
+    fun getTelemetryRawBySession(sessionId: Long): Flow<List<TelemetryRaw>>
 
-    @Query("SELECT COUNT(*) FROM telemetry_raw WHERE sessionId = :sessionId")
-    suspend fun getTelemetryCount(sessionId: Long): Int
-
-    @Query("SELECT * FROM telemetry_raw WHERE sessionId = :sessionId AND quality = :quality")
-    fun getTelemetryByQuality(sessionId: Long, quality: String): Flow<List<TelemetryRaw>>
-
-    // ✅ TAMBAHKAN METHOD INI
     @Query("SELECT * FROM telemetry_raw WHERE sessionId = :sessionId ORDER BY timestamp DESC LIMIT 1")
-    suspend fun getLatestTelemetry(sessionId: Long): TelemetryRaw?
+    suspend fun getLatestTelemetryRaw(sessionId: Long): TelemetryRaw?
 
     @Query("DELETE FROM telemetry_raw WHERE sessionId = :sessionId")
-    suspend fun deleteTelemetryBySession(sessionId: Long)
+    suspend fun deleteBySession(sessionId: Long)
 
-    // Statistics queries
-    @Query("""
-        SELECT 
-            MIN(timestamp) as startTime,
-            MAX(timestamp) as endTime,
-            COUNT(*) as totalRecords,
-            AVG(speed) as avgSpeed,
-            AVG(vibrationZ) as avgVibration,
-            AVG(gpsAccuracy) as avgAccuracy
-        FROM telemetry_raw 
-        WHERE sessionId = :sessionId
-    """)
-    suspend fun getTelemetryStats(sessionId: Long): TelemetryStats?
+    @Query("SELECT COUNT(*) FROM telemetry_raw WHERE sessionId = :sessionId")
+    suspend fun countBySession(sessionId: Long): Int
 }
-
-data class TelemetryStats(
-    val startTime: Long,
-    val endTime: Long,
-    val totalRecords: Int,
-    val avgSpeed: Float,
-    val avgVibration: Float,
-    val avgAccuracy: Float?
-)

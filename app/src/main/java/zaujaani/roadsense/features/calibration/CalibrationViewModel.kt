@@ -7,13 +7,16 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import zaujaani.roadsense.core.bluetooth.BluetoothGateway
 import zaujaani.roadsense.data.local.DeviceCalibration
 import zaujaani.roadsense.data.repository.SurveyRepository
+import java.util.*
 import javax.inject.Inject
 
 @HiltViewModel
 class CalibrationViewModel @Inject constructor(
-    private val repository: SurveyRepository
+    private val repository: SurveyRepository,
+    private val bluetoothGateway: BluetoothGateway   // ✅ inject gateway
 ) : ViewModel() {
 
     private val _calibrationState = MutableLiveData<CalibrationState>(CalibrationState.Loading)
@@ -68,8 +71,21 @@ class CalibrationViewModel @Inject constructor(
                     notes = notes,
                     isActive = true
                 )
-
                 repository.saveCalibration(calibration)
+
+                // ✅ Kirim ke ESP32 (jika terkoneksi)
+                val diameterCm = when (wheelDiameterUnit.lowercase(Locale.ROOT)) {
+                    "cm" -> wheelDiameter
+                    "mm" -> wheelDiameter / 10f
+                    "m" -> wheelDiameter * 100f
+                    else -> wheelDiameter // fallback, asumsi cm
+                }
+                val success = bluetoothGateway.sendCalibration(diameterCm, pulsesPerRotation)
+                if (!success) {
+                    Timber.w("⚠️ Gagal mengirim kalibrasi ke ESP32")
+                    // Bisa tampilkan warning, tapi tidak menggagalkan penyimpanan
+                }
+
                 _calibrationState.value = CalibrationState.Saved
                 Timber.d("Calibration saved successfully")
             } catch (e: Exception) {
@@ -79,29 +95,55 @@ class CalibrationViewModel @Inject constructor(
         }
     }
 
-    fun calculateCircumference(diameter: Float, unit: String): Float {
-        return diameter * Math.PI.toFloat()
+    /**
+     * Konversi diameter ke meter berdasarkan unit
+     */
+    private fun convertDiameterToMeter(diameter: Float, unit: String): Float {
+        return when (unit.lowercase(Locale.ROOT)) {
+            "cm" -> diameter / 100f
+            "mm" -> diameter / 1000f
+            "in", "inch" -> diameter * 0.0254f
+            else -> diameter // asumsi sudah dalam meter
+        }
     }
 
+    /**
+     * Hitung keliling roda dalam meter
+     */
+    fun calculateCircumference(diameter: Float, unit: String): Float {
+        val diameterInMeter = convertDiameterToMeter(diameter, unit)
+        return diameterInMeter * Math.PI.toFloat()
+    }
+
+    /**
+     * Hitung jarak per pulsa dalam meter
+     */
     fun calculateDistancePerPulse(diameter: Float, unit: String, pulsesPerRotation: Int): Float {
         val circumference = calculateCircumference(diameter, unit)
         return circumference / pulsesPerRotation
     }
 
+    /**
+     * Ringkasan kalibrasi dalam berbagai satuan (untuk ditampilkan di UI)
+     */
     fun getCalibrationSummary(
         diameter: Float,
         unit: String,
         pulsesPerRotation: Int
     ): Map<String, String> {
-        val circumference = calculateCircumference(diameter, unit)
-        val distancePerPulse = circumference / pulsesPerRotation
+        val diameterInMeter = convertDiameterToMeter(diameter, unit)
+        val circumferenceMeter = diameterInMeter * Math.PI.toFloat()
+        val distancePerPulseMeter = circumferenceMeter / pulsesPerRotation
 
+        // Format untuk display
         return mapOf(
-            "diameter" to "$diameter $unit",
-            "circumference" to String.format("%.2f %s", circumference, unit),
+            "diameter" to String.format(Locale.getDefault(), "%.2f %s", diameter, unit),
+            "diameter_m" to String.format(Locale.getDefault(), "%.3f m", diameterInMeter),
+            "circumference_m" to String.format(Locale.getDefault(), "%.3f m", circumferenceMeter),
+            "circumference_cm" to String.format(Locale.getDefault(), "%.1f cm", circumferenceMeter * 100),
             "pulses_per_rotation" to pulsesPerRotation.toString(),
-            "distance_per_pulse" to String.format("%.4f %s", distancePerPulse, unit),
-            "distance_per_1000_pulses" to String.format("%.2f %s", distancePerPulse * 1000, unit)
+            "distance_per_pulse_mm" to String.format(Locale.getDefault(), "%.2f mm", distancePerPulseMeter * 1000),
+            "distance_per_1000_pulses_m" to String.format(Locale.getDefault(), "%.2f m", distancePerPulseMeter * 1000)
         )
     }
 }

@@ -1,25 +1,30 @@
-package zaujaani.roadsense.features.summary.adapter
+package zaujaani.roadsense.features.summary
 
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import zaujaani.roadsense.data.local.RoadSegmentSummary
+import zaujaani.roadsense.R
 import zaujaani.roadsense.databinding.ItemSegmentSummaryBinding
+import zaujaani.roadsense.data.local.RoadSegmentSummary
 import zaujaani.roadsense.domain.model.RoadCondition
 import zaujaani.roadsense.domain.model.SurfaceType
 import java.text.SimpleDateFormat
 import java.util.*
-import zaujaani.roadsense.R
+import kotlin.math.abs
 
 class SummaryAdapter(
     private val onItemClick: (RoadSegmentSummary) -> Unit = {},
     private val onItemLongClick: (RoadSegmentSummary) -> Boolean = { false }
 ) : ListAdapter<RoadSegmentSummary, SummaryAdapter.SummaryViewHolder>(DiffCallback()) {
 
+    /**
+     * Interface untuk aksi dari adapter ke fragment
+     */
     interface SummaryActions {
         fun onExportClicked(summary: RoadSegmentSummary)
         fun onDeleteClicked(summary: RoadSegmentSummary)
@@ -47,87 +52,115 @@ class SummaryAdapter(
     ) : RecyclerView.ViewHolder(binding.root) {
 
         init {
+            // Klik item biasa
             binding.root.setOnClickListener {
-                if (adapterPosition != RecyclerView.NO_POSITION) {
-                    onItemClick(getItem(adapterPosition))
+                val position = adapterPosition
+                if (position != RecyclerView.NO_POSITION) {
+                    onItemClick(getItem(position))
                 }
             }
 
+            // Long klik untuk menu konteks
             binding.root.setOnLongClickListener {
-                if (adapterPosition != RecyclerView.NO_POSITION) {
-                    showContextMenu(getItem(adapterPosition))
+                val position = adapterPosition
+                if (position != RecyclerView.NO_POSITION) {
+                    showContextMenu(getItem(position))
                     true
                 } else false
             }
 
+            // Tombol aksi di card
             binding.btnExport.setOnClickListener {
-                if (adapterPosition != RecyclerView.NO_POSITION) {
-                    actionsListener?.onExportClicked(getItem(adapterPosition))
+                val position = adapterPosition
+                if (position != RecyclerView.NO_POSITION) {
+                    actionsListener?.onExportClicked(getItem(position))
                 }
             }
 
             binding.btnEdit.setOnClickListener {
-                if (adapterPosition != RecyclerView.NO_POSITION) {
-                    actionsListener?.onEditClicked(getItem(adapterPosition))
+                val position = adapterPosition
+                if (position != RecyclerView.NO_POSITION) {
+                    actionsListener?.onEditClicked(getItem(position))
                 }
             }
 
             binding.btnDelete.setOnClickListener {
-                if (adapterPosition != RecyclerView.NO_POSITION) {
-                    actionsListener?.onDeleteClicked(getItem(adapterPosition))
+                val position = adapterPosition
+                if (position != RecyclerView.NO_POSITION) {
+                    actionsListener?.onDeleteClicked(getItem(position))
                 }
             }
         }
 
         fun bind(summary: RoadSegmentSummary) {
             with(binding) {
+                // Nama jalan + jumlah segmen (jika lebih dari 1)
                 tvRoadName.text = if (summary.segmentCount > 1) {
-                    "${summary.roadName} (${summary.segmentCount} segments)"
+                    "${summary.roadName} (${summary.segmentCount} segmen)"
                 } else {
                     summary.roadName
                 }
 
+                // Confidence badge
                 setConfidenceBadge(summary.confidence)
+
+                // Chip kondisi dan surface
                 setConditionChip(summary.condition)
                 setSurfaceChip(summary.surface)
 
-                // ✅ GUNAKAN totalDistance, BUKAN distanceMeters
+                // Jarak (gunakan totalDistance dari summary, bukan per segment)
                 tvDistance.text = formatDistance(summary.totalDistance)
 
+                // Severity
                 setSeverityBadge(summary.severity)
+
+                // Kecepatan rata-rata
                 setSpeedInfo(summary.avgSpeed)
+
+                // Vibrasi rata-rata
                 setVibrationInfo(summary.avgVibration)
+
+                // Akurasi GPS rata-rata
                 setGpsInfo(summary.avgAccuracy)
+
+                // Timestamp
                 setTimestamp(summary.timestamp)
+
+                // Jumlah segmen (tampilkan jika >1)
                 setSegmentCount(summary.segmentCount)
-                setDataSource(summary.dataSource) // SAFE CALL DI DALAM FUNGSI
+
+                // Sumber data (sensor / GPS)
+                setDataSource(summary.dataSource)
             }
         }
 
-        private fun ItemSegmentSummaryBinding.setConfidenceBadge(confidence: String) {
-            val confidenceText = when (confidence) {
-                "HIGH" -> "TINGGI"
-                "MEDIUM" -> "SEDANG"
-                else -> "RENDAH"
-            }
-            tvConfidence.text = confidenceText
+        // ---------- HELPER FUNCTIONS ----------
 
-            val (bgColor, textColor) = when (confidence) {
-                "HIGH" -> Pair(
-                    ContextCompat.getColor(itemView.context, R.color.confidence_high_bg),
-                    ContextCompat.getColor(itemView.context, R.color.confidence_high_text)
+        private fun ItemSegmentSummaryBinding.setConfidenceBadge(confidence: String) {
+            val (bgColor, textColor, label) = when (confidence) {
+                "HIGH" -> Triple(
+                    R.color.confidence_high_bg,
+                    R.color.confidence_high_text,
+                    "TINGGI"
                 )
-                "MEDIUM" -> Pair(
-                    ContextCompat.getColor(itemView.context, R.color.confidence_medium_bg),
-                    ContextCompat.getColor(itemView.context, R.color.confidence_medium_text)
+                "MEDIUM" -> Triple(
+                    R.color.confidence_medium_bg,
+                    R.color.confidence_medium_text,
+                    "SEDANG"
                 )
-                else -> Pair(
-                    ContextCompat.getColor(itemView.context, R.color.confidence_low_bg),
-                    ContextCompat.getColor(itemView.context, R.color.confidence_low_text)
+                else -> Triple(
+                    R.color.confidence_low_bg,
+                    R.color.confidence_low_text,
+                    "RENDAH"
                 )
             }
-            tvConfidence.setBackgroundColor(bgColor)
-            tvConfidence.setTextColor(textColor)
+            tvConfidence.text = label
+            tvConfidence.setBackgroundColor(
+                ContextCompat.getColor(itemView.context, bgColor)
+            )
+            tvConfidence.setTextColor(
+                ContextCompat.getColor(itemView.context, textColor)
+            )
         }
 
         private fun ItemSegmentSummaryBinding.setConditionChip(condition: String) {
@@ -157,9 +190,9 @@ class SummaryAdapter(
 
         private fun formatDistance(meters: Float): String {
             return if (meters >= 1000) {
-                String.format("%.2f km", meters / 1000)
+                String.format(Locale.getDefault(), "%.2f km", meters / 1000)
             } else {
-                String.format("%.0f m", meters)
+                String.format(Locale.getDefault(), "%.0f m", meters)
             }
         }
 
@@ -180,7 +213,7 @@ class SummaryAdapter(
         }
 
         private fun ItemSegmentSummaryBinding.setSpeedInfo(speed: Float) {
-            tvSpeed.text = String.format("%.1f km/h", speed)
+            tvSpeed.text = String.format(Locale.getDefault(), "%.1f km/h", speed)
             tvSpeed.setTextColor(
                 ContextCompat.getColor(
                     itemView.context,
@@ -194,8 +227,8 @@ class SummaryAdapter(
         }
 
         private fun ItemSegmentSummaryBinding.setVibrationInfo(vibration: Float) {
-            val absVibration = Math.abs(vibration)
-            tvVibration.text = String.format("%.2f g", absVibration)
+            val absVibration = abs(vibration)
+            tvVibration.text = String.format(Locale.getDefault(), "%.2f g", absVibration)
             tvVibration.setTextColor(
                 ContextCompat.getColor(
                     itemView.context,
@@ -235,8 +268,8 @@ class SummaryAdapter(
             }
         }
 
-        // ✅ SAFE CALL UNTUK tvDataSource & tvDataWarning
         private fun ItemSegmentSummaryBinding.setDataSource(dataSource: String) {
+            // Gunakan safe call karena mungkin view-nya optional
             tvDataSource?.let { source ->
                 when (dataSource) {
                     "SENSOR_PRIMARY" -> {
@@ -256,7 +289,7 @@ class SummaryAdapter(
         }
 
         private fun showContextMenu(summary: RoadSegmentSummary) {
-            androidx.appcompat.app.AlertDialog.Builder(itemView.context)
+            AlertDialog.Builder(itemView.context)
                 .setTitle(summary.roadName)
                 .setItems(arrayOf("Ekspor", "Edit", "Hapus", "Lihat Detail")) { _, which ->
                     when (which) {
@@ -273,7 +306,7 @@ class SummaryAdapter(
 
     private class DiffCallback : DiffUtil.ItemCallback<RoadSegmentSummary>() {
         override fun areItemsTheSame(oldItem: RoadSegmentSummary, newItem: RoadSegmentSummary): Boolean {
-            // ✅ GUNAKAN segment.id
+            // Gunakan ID segmen, bukan ID summary
             return oldItem.segment.id == newItem.segment.id
         }
 

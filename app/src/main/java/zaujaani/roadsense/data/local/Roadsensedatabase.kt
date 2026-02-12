@@ -7,24 +7,26 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [
-        SurveyEntity::class,
-        TelemetryEntity::class,
         DeviceCalibration::class,
         SurveySession::class,
-        RawTracking::class,
+        RawTracking::class,      // ✅ Masih dipakai? Cek nanti, amankan dulu
         RoadSegment::class,
-        TelemetryRaw::class
+        TelemetryRaw::class      // ✅ Raw telemetry untuk audit trail
     ],
-    version = 2,
+    version = 3,                // ⚠️ Naikkan versi karena hapus tabel lama
     exportSchema = false
 )
 abstract class RoadSenseDatabase : RoomDatabase() {
 
-    abstract fun surveyDao(): SurveyDao
+    // ========== DAO BARU (HANYA YANG DIPAKAI) ==========
     abstract fun calibrationDao(): CalibrationDao
-    abstract fun telemetryDao(): TelemetryDao
-    abstract fun sessionDao(): SessionDao           // ✅ BARU
-    abstract fun roadSegmentDao(): RoadSegmentDao   // ✅ BARU
+    abstract fun sessionDao(): SessionDao
+    abstract fun roadSegmentDao(): RoadSegmentDao
+    abstract fun telemetryDao(): TelemetryDao   // ✅ untuk TelemetryRaw
+
+    // ❌ HAPUS semua DAO legacy
+    // abstract fun surveyDao(): SurveyDao
+    // abstract fun telemetryEntityDao(): TelemetryDao (untuk TelemetryEntity)
 
     companion object {
         @Volatile
@@ -37,7 +39,7 @@ abstract class RoadSenseDatabase : RoomDatabase() {
                     RoadSenseDatabase::class.java,
                     "roadsense_database"
                 )
-                    .fallbackToDestructiveMigration()
+                    .fallbackToDestructiveMigration() // untuk development
                     .build()
                 INSTANCE = instance
                 instance

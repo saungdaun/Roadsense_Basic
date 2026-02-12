@@ -1,8 +1,6 @@
 package zaujaani.roadsense.data.repository
 
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import zaujaani.roadsense.data.local.TelemetryDao
 import zaujaani.roadsense.data.local.TelemetryRaw
 import javax.inject.Inject
@@ -13,27 +11,26 @@ class TelemetryRepository @Inject constructor(
     private val telemetryDao: TelemetryDao
 ) {
 
-    private val _latestTelemetry = MutableStateFlow<TelemetryRaw?>(null)
-    val latestTelemetry = _latestTelemetry.asStateFlow()
+    // ========== INSERT ==========
+    suspend fun insertTelemetryRaw(telemetry: TelemetryRaw): Long =
+        telemetryDao.insertTelemetryRaw(telemetry)
 
-    suspend fun insertTelemetryRaw(data: TelemetryRaw) {
-        telemetryDao.insertTelemetry(data)   // ✅ nama method di DAO = insertTelemetry
-    }
+    suspend fun insertTelemetryRawBatch(telemetryList: List<TelemetryRaw>) =
+        telemetryDao.insertTelemetryRawBatch(telemetryList)
 
-    fun updateLatestTelemetry(data: TelemetryRaw) {
-        _latestTelemetry.value = data
-    }
-
+    // ========== QUERY ==========
     fun getTelemetryRawBySession(sessionId: Long): Flow<List<TelemetryRaw>> =
-        telemetryDao.getTelemetryBySession(sessionId)
+        telemetryDao.getTelemetryRawBySession(sessionId)
 
-    suspend fun getTelemetryCount(sessionId: Long): Int =
-        telemetryDao.getTelemetryCount(sessionId)
+    suspend fun getLatestTelemetryRaw(sessionId: Long): TelemetryRaw? =
+        telemetryDao.getLatestTelemetryRaw(sessionId)
 
-    suspend fun getLatestTelemetryPoint(sessionId: Long): TelemetryRaw? =
-        telemetryDao.getLatestTelemetry(sessionId)   // ✅ method baru di DAO
+    suspend fun countBySession(sessionId: Long): Int =
+        telemetryDao.countBySession(sessionId)
 
-    suspend fun insertTelemetryBatch(telemetryList: List<TelemetryRaw>) {
-        telemetryDao.insertBatchTelemetry(telemetryList)  // ✅ nama method di DAO = insertBatchTelemetry
-    }
+    suspend fun deleteBySession(sessionId: Long) =
+        telemetryDao.deleteBySession(sessionId)
+
+    // ========== LEGACY DIHAPUS ==========
+    // Semua fungsi yang mengacu ke TelemetryEntity sudah dihapus
 }

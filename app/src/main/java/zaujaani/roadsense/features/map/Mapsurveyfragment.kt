@@ -100,15 +100,15 @@ class MapSurveyFragment : Fragment() {
 
         mapView.apply {
             setTileSource(TileSourceFactory.MAPNIK)
-            zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
+            // Kontrol zoom modern – gak pakai setBuiltInZoomControls (deprecated)
+            zoomController.setVisibility(CustomZoomButtonsController.Visibility.SHOW_AND_FADEOUT)
             setMultiTouchControls(true)
             minZoomLevel = 3.0
             maxZoomLevel = 19.0
             controller.setZoom(15.0)
-            setBuiltInZoomControls(true)
         }
 
-        // Polylines
+        // Polyline tracking (putih solid)
         trackingPolyline = Polyline(mapView).apply {
             outlinePaint.color = ContextCompat.getColor(requireContext(), R.color.tracking_line)
             outlinePaint.strokeWidth = 8f
@@ -117,6 +117,7 @@ class MapSurveyFragment : Fragment() {
         }
         mapView.overlays.add(trackingPolyline)
 
+        // Polyline segment (biru putus-putus)
         segmentPolyline = Polyline(mapView).apply {
             outlinePaint.color = ContextCompat.getColor(requireContext(), R.color.segment_line)
             outlinePaint.strokeWidth = 12f
@@ -126,13 +127,12 @@ class MapSurveyFragment : Fragment() {
         }
         mapView.overlays.add(segmentPolyline)
 
-        // Markers
+        // Marker start & end
         startMarker = Marker(mapView).apply {
             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
             icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_marker_start)
             isDraggable = true
         }
-
         endMarker = Marker(mapView).apply {
             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
             icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_marker_end)
@@ -261,13 +261,12 @@ class MapSurveyFragment : Fragment() {
             centerMapOnCurrentLocation()
         }
 
-        // Overlay untuk tap segment
+        // Overlay untuk tap pada saat pembuatan segment
         if (mapTapOverlay == null) {
             mapTapOverlay = object : Overlay() {
                 override fun onSingleTapConfirmed(e: MotionEvent?, mapView: MapView?): Boolean {
                     if (viewModel.uiState.value.isCreatingSegment) {
                         val projection = mapView?.projection
-                        // ✅ KONVERSI IGeoPoint → GeoPoint
                         val geoPoint = projection?.fromPixels(e?.x?.toInt() ?: 0, e?.y?.toInt() ?: 0)
                             ?.let { GeoPoint(it) }
                         geoPoint?.let { point ->
@@ -301,23 +300,46 @@ class MapSurveyFragment : Fragment() {
         val isReady = viewModel.deviceReadyState.value == MapViewModel.DeviceReadyState.READY
 
         if (state.isTracking) {
+            // Tombol START → STOP
             binding.btnStartStop.text = getString(R.string.btn_stop)
+            binding.btnStartStop.icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_stop)
             binding.btnStartStop.backgroundTintList = ContextCompat.getColorStateList(
                 requireContext(),
                 R.color.stop_red
             )
+            binding.btnStartStop.iconTint = ContextCompat.getColorStateList(requireContext(), R.color.white)
+
+            // Tombol PAUSE / RESUME
             binding.btnPauseResume.isEnabled = true
-            binding.btnPauseResume.text = if (state.isPaused)
-                getString(R.string.btn_resume) else getString(R.string.btn_pause)
+            if (state.isPaused) {
+                binding.btnPauseResume.text = getString(R.string.btn_resume)
+                binding.btnPauseResume.icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_play_arrow)
+            } else {
+                binding.btnPauseResume.text = getString(R.string.btn_pause)
+                binding.btnPauseResume.icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_pause)
+            }
+            binding.btnPauseResume.iconTint = ContextCompat.getColorStateList(requireContext(), R.color.white)
+
+            // Tombol Add Survey aktif
             binding.btnAddSurvey.isEnabled = true
         } else {
+            // Tombol STOP → START
             binding.btnStartStop.text = getString(R.string.btn_start)
+            binding.btnStartStop.icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_play_arrow)
             binding.btnStartStop.backgroundTintList = ContextCompat.getColorStateList(
                 requireContext(),
                 R.color.start_green
             )
+            binding.btnStartStop.iconTint = ContextCompat.getColorStateList(requireContext(), R.color.white)
             binding.btnStartStop.isEnabled = isReady
+
+            // Tombol PAUSE tidak aktif
             binding.btnPauseResume.isEnabled = false
+            binding.btnPauseResume.text = getString(R.string.btn_pause)
+            binding.btnPauseResume.icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_pause)
+            binding.btnPauseResume.iconTint = ContextCompat.getColorStateList(requireContext(), R.color.white)
+
+            // Tombol Add Survey nonaktif
             binding.btnAddSurvey.isEnabled = false
         }
     }
@@ -526,7 +548,6 @@ class MapSurveyFragment : Fragment() {
             val validationResult = viewModel.completeSegmentCreation()
 
             if (validationResult.isValid) {
-                // ✅ Kirim confidence DAN messages
                 showSurveyBottomSheet(
                     confidence = validationResult.confidence,
                     messages = validationResult.messages
@@ -543,7 +564,6 @@ class MapSurveyFragment : Fragment() {
         }
     }
 
-    // ✅ Method diubah untuk menerima List<String>
     private fun showSurveyBottomSheet(confidence: Confidence, messages: List<String>) {
         val bottomSheet = SurveyBottomSheet.newInstance(confidence, messages)
         bottomSheet.setOnSaveListener { roadName, condition, surface, notes ->
