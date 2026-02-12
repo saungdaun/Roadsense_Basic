@@ -127,7 +127,7 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
     implementation("androidx.gridlayout:gridlayout:1.0.0")
-    implementation("com.google.android.gms:play-services-location:21.0.1")
+
     implementation("com.google.code.gson:gson:2.10.1")
 
 }

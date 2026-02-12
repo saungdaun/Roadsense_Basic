@@ -1,13 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    package="zaujaani.roadsense">
+    xmlns:tools="http://schemas.android.com/tools">
+
 
     <!-- ============ PERMISSIONS ============ -->
 
     <!-- Location Permissions -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- ============ PERMISSIONS (tambahkan) ============ -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
+
     <uses-permission
         android:name="android.permission.ACCESS_BACKGROUND_LOCATION"
         tools:ignore="BackgroundPermission" />
@@ -107,9 +111,9 @@
             android:name=".core.service.TrackingForegroundService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="location|dataSync"
+            android:foregroundServiceType="location|connectedDevice"
             android:description="@string/tracking_service_description"
-        android:stopWithTask="false" />
+            android:stopWithTask="false" />
 
         <!-- OSM Configuration -->
         <meta-data

@@ -57,7 +57,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Total Jarak"
+                            android:text="@string/total_distance"
                             android:textColor="@color/secondary_text"
                             android:textSize="@dimen/text_small" />
 
@@ -65,10 +65,11 @@
                             android:id="@+id/tvTotalDistance"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="0.00 km"
+                            android:text="@string/format_distance_km"
                             android:textColor="@color/primary_text"
                             android:textSize="@dimen/text_xxlarge"
-                            android:textStyle="bold" />
+                            android:textStyle="bold"
+                            tools:text="0.00 km" />
 
                     </LinearLayout>
 
@@ -81,7 +82,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Jumlah Segmen"
+                            android:text="@string/segment_count"
                             android:textColor="@color/secondary_text"
                             android:textSize="@dimen/text_small" />
 
@@ -89,10 +90,11 @@
                             android:id="@+id/tvSegmentCount"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="0 Segmen"
+                            android:text="@string/format_distance_m"
                             android:textColor="@color/primary_text"
                             android:textSize="@dimen/text_xxlarge"
-                            android:textStyle="bold" />
+                            android:textStyle="bold"
+                            tools:text="0 Segmen" />
 
                     </LinearLayout>
 
@@ -115,7 +117,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginEnd="@dimen/margin_medium"
-                    android:text="Filter"
+                    android:text="@string/filter"
                     android:textAllCaps="false"
                     app:icon="@drawable/ic_filter"
                     app:iconGravity="textStart" />
@@ -127,7 +129,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginEnd="@dimen/margin_medium"
-                    android:text="Statistik"
+                    android:text="@string/statistics"
                     android:textAllCaps="false"
                     app:icon="@drawable/ic_statistics"
                     app:iconGravity="textStart" />
@@ -138,7 +140,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Ekspor"
+                    android:text="@string/export"
                     android:textAllCaps="false"
                     app:icon="@drawable/ic_export"
                     app:iconGravity="textStart" />
@@ -157,18 +159,18 @@
                     android:id="@+id/tvConditionStats"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Baik: 0.00 km • Sedang: 0.00 km • Rusak: 0.00 km"
                     android:textColor="@color/secondary_text"
-                    android:textSize="@dimen/text_xsmall" />
+                    android:textSize="@dimen/text_xsmall"
+                    tools:text="Baik: 0.00 km • Sedang: 0.00 km • Rusak: 0.00 km" />
 
                 <TextView
                     android:id="@+id/tvConfidenceStats"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Tinggi: 0 • Sedang: 0 • Rendah: 0"
+                    android:layout_marginTop="@dimen/margin_small"
                     android:textColor="@color/secondary_text"
                     android:textSize="@dimen/text_xsmall"
-                    android:layout_marginTop="@dimen/margin_small" />
+                    tools:text="Tinggi: 0 • Sedang: 0 • Rendah: 0" />
 
             </LinearLayout>
 
@@ -190,8 +192,8 @@
                 android:layout_height="match_parent"
                 android:gravity="center"
                 android:orientation="vertical"
-                android:visibility="visible"
-                android:padding="@dimen/margin_xlarge">
+                android:padding="@dimen/margin_xlarge"
+                android:visibility="visible">
 
                 <ImageView
                     android:layout_width="120dp"
@@ -202,20 +204,20 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Belum ada data survey"
-                    android:textSize="@dimen/text_large"
-                    android:textStyle="bold"
+                    android:layout_marginTop="@dimen/margin_large"
+                    android:text="@string/empty_summary_title"
                     android:textColor="@color/primary_text"
-                    android:layout_marginTop="@dimen/margin_large" />
+                    android:textSize="@dimen/text_large"
+                    android:textStyle="bold" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Mulai survey dan buat segmen untuk melihat ringkasan"
-                    android:textSize="@dimen/text_medium"
-                    android:textColor="@color/secondary_text"
                     android:layout_marginTop="@dimen/margin_medium"
-                    android:gravity="center" />
+                    android:gravity="center"
+                    android:text="@string/empty_summary_message"
+                    android:textColor="@color/secondary_text"
+                    android:textSize="@dimen/text_medium" />
 
             </LinearLayout>
 

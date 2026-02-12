@@ -1,357 +1,306 @@
 <resources>
+    <!-- ===== APP ===== -->
     <string name="app_name">Roadsense</string>
-    <string name="action_start">Start</string>
-    <string name="action_stop">Stop</string>
-    <string name="action_pause">Pause</string>
-    <string name="action_resume">Resume</string>
-    <string name="title_survey">Survey</string>
-    <string name="title_data">Data</string>
-    <string name="title_report">Report</string>
-    <string name="title_settings">Settings</string>
-    <string name="title_help">Help</string>
+    <string name="tracking_service_description">Mengelola koneksi Bluetooth dengan ESP32, merekam data sensor, dan melacak posisi GPS untuk survey jalan. Service ini tetap berjalan saat aplikasi di latar belakang.</string>
 
-    <!-- Bluetooth -->
-    <string name="bluetooth_scanning">Scanning...</string>
+    <!-- ===== NAVIGATION ===== -->
+    <string name="nav_map_survey">Survey</string>
+    <string name="nav_summary">Ringkasan</string>
+    <string name="nav_settings">Pengaturan</string>
+    <string name="nav_calibration">Kalibrasi</string>
 
-    <!-- GPS -->
-    <string name="gps_active">GPS Active</string>
-    <string name="gps_inactive">GPS Inactive</string>
+    <!-- ===== SURVEY CONTROL ===== -->
+    <string name="btn_start_survey">Mulai Survey</string>
+    <string name="btn_stop_survey">Hentikan</string>
+    <string name="btn_pause_survey">Jeda</string>
+    <string name="btn_resume_survey">Lanjutkan</string>
+    <string name="btn_connect_bluetooth">Hubungkan Bluetooth</string>
+    <string name="btn_center_map">Pusatkan Peta</string>
+    <string name="btn_settings">Pengaturan</string>
+    <string name="btn_add_survey">Tambah Survey</string>
+    <string name="btn_calibrate">Kalibrasi</string>
 
-    <!-- Permissions -->
-    <string name="permission_bluetooth_title">Bluetooth Permission</string>
-    <string name="permission_location_title">Location Permission</string>
-    <string name="permission_rationale">RoadSense needs these permissions to connect to sensors and track location</string>
+    <!-- ===== STATUS ===== -->
+    <string name="status_ready">Siap</string>
+    <string name="status_connecting">Menghubungkan…</string>
+    <string name="status_idle">Siap</string>
+    <string name="status_running">Survey Berjalan</string>
+    <string name="status_paused">Dijeda</string>
+    <string name="status_stopped">Berhenti</string>
+    <string name="status_ready_ui">SIAP</string>
+    <string name="status_recording">MEREKAM</string>
+    <string name="status_paused_ui">DIJEDA</string>
+    <string name="status_creating_segment">MEMBUAT SEGMEN</string>
+    <string name="status_error">Error</string>
 
-    <!-- Errors -->
-    <string name="error_bluetooth">Bluetooth Error</string>
-    <string name="error_gps">GPS Error</string>
-    <string name="error_connection">Connection Error</string>
+    <!-- ===== BLUETOOTH & ESP32 ===== -->
+    <string name="bluetooth_scanning">Memindai…</string>
+    <string name="bluetooth_connected">ESP32 Terhubung</string>
+    <string name="bluetooth_disconnected">Bluetooth Terputus</string>
+    <string name="bluetooth_connecting">Menghubungkan ke ESP32…</string>
+    <string name="bluetooth_error">Bluetooth Error: %s</string>
+    <string name="esp32_status_connecting">ESP32: Menghubungkan…</string>
+    <string name="esp32_status_connected">ESP32: Terhubung</string>
+    <string name="esp32_status_disconnected">ESP32: Terputus</string>
+    <string name="esp32_status_error">ESP32: Error</string>
+    <string name="connection_retrying">Mencoba ulang… (Percobaan %d)</string>
+    <string name="connection_max_attempts">Gagal terhubung setelah beberapa kali percobaan</string>
+    <string name="connection_lost">Koneksi terputus</string>
+    <string name="connection_restored">Koneksi tersambung kembali</string>
 
-    <!-- Status -->
-    <string name="status_ready">Ready to Start</string>
-    <string name="status_running">Survey Running</string>
-    <string name="status_paused">Paused</string>
-    <string name="status_stopped">Stopped</string>
+    <!-- ===== GPS ===== -->
+    <string name="gps_active">GPS Aktif</string>
+    <string name="gps_inactive">GPS Tidak Aktif</string>
+    <string name="gps_status_searching">GPS: Mencari…</string>
+    <string name="gps_status_available">GPS: Tersedia</string>
+    <string name="gps_status_poor_signal">GPS: Sinyal Lemah</string>
+    <string name="gps_status_error">GPS: Error</string>
+    <string name="gps_disabled">GPS Dimatikan</string>
+    <string name="gps_unavailable">GPS Tidak Tersedia (Menggunakan Encoder)</string>
+    <string name="gps_available">GPS ±%1$.1f m</string>
 
-    <!-- Calibration -->
-    <string name="calibration_distance">Distance Calibration</string>
-    <string name="calibration_imu">IMU Calibration</string>
+    <!-- ===== PERMISSIONS ===== -->
+    <string name="permission_bluetooth_title">Izin Bluetooth</string>
+    <string name="permission_location_title">Izin Lokasi</string>
+    <string name="permission_rationale_title">Izin Diperlukan</string>
+    <string name="permission_rationale_message">RoadSense membutuhkan izin Lokasi dan Bluetooth untuk berfungsi dengan baik.</string>
+    <string name="permission_rationale">RoadSense membutuhkan izin ini untuk terhubung ke sensor dan melacak lokasi</string>
+    <string name="btn_grant_permissions">Berikan Izin</string>
+    <string name="btn_open_settings">Buka Pengaturan</string>
+    <string name="permission_denied">Izin ditolak</string>
+    <string name="permission_granted">Izin diberikan</string>
+    <string name="bluetooth_permission_required">Izin Bluetooth diperlukan</string>
+    <string name="location_permission_required">Izin Lokasi diperlukan</string>
+    <string name="error_permissions">Izin diperlukan untuk tracking</string>
+    <string name="error_no_permission">Izin yang diperlukan belum diberikan</string>
 
-    <!-- Settings -->
-    <string name="settings_bluetooth">Bluetooth</string>
-    <string name="settings_gps">GPS</string>
-    <string name="settings_data">Data Collection</string>
-    <string name="settings_about">About</string>
-    <string name="settings_notifications">Notifications</string>
-    <string name="settings_help_support">Help &amp; Support</string>
-    <string name="settings_bluetooth_desc">Configure Bluetooth devices</string>
-    <string name="settings_app_desc">Road survey and monitoring application</string>
-
-    <!-- Help -->
-    <string name="help_user_guide">User Guide</string>
-    <string name="help_faq">FAQ</string>
-    <string name="help_support">Support</string>
-    <string name="help_contact">Contact</string>
-    <string name="help_hours">Hours</string>
-    <string name="help_version">Version</string>
-    <string name="help_all_rights">All rights reserved</string>
-
-    <!-- Surface Types -->
-    <string name="surface_aspal">Aspal</string>
-    <string name="surface_beton">Beton</string>
-    <string name="surface_tanah">Tanah</string>
-    <string name="surface_aspal_desc">Asphalt surface</string>
-    <string name="surface_beton_desc">Concrete surface</string>
-    <string name="surface_tanah_desc">Earth/unpaved surface</string>
-
-    <!-- Road Conditions -->
-    <string name="condition_good">Good</string>
-    <string name="condition_fair">Fair</string>
-    <string name="condition_light_damage">Light Damage</string>
-    <string name="condition_heavy_damage">Heavy Damage</string>
-    <string name="condition_good_desc">Excellent condition</string>
-    <string name="condition_fair_desc">Minor wear visible</string>
-    <string name="condition_light_desc">Some cracks/potholes</string>
-    <string name="condition_heavy_desc">Severe deterioration</string>
-
-    <!-- Survey Labels -->
-    <string name="label_surface_type">Surface Type</string>
-    <string name="label_road_condition">Road Condition</string>
-    <string name="label_survey_info">Survey Information</string>
-
-    <string name="label_select">Select</string>
+    <!-- ===== LABELS ===== -->
+    <string name="label_surface_type">Jenis Permukaan</string>
+    <string name="label_road_condition">Kondisi Jalan</string>
+    <string name="label_survey_info">Informasi Survey</string>
+    <string name="label_select">Pilih</string>
     <string name="label_status">Status</string>
+    <string name="label_distance">Jarak</string>
+    <string name="label_speed">Kecepatan</string>
+    <string name="label_iri">IRI (Kekasaran)</string>
+    <string name="label_quality">Kualitas Jalan</string>
+    <string name="label_session_id">ID Sesi</string>
+    <string name="label_duration">Durasi</string>
+    <string name="label_data_points">Titik Data</string>
 
-    <!-- Format Strings -->
-    <string name="format_distance">%.2f km</string>
-    <string name="format_duration" formatted="false">%d:%d</string>
+    <!-- ===== UNITS ===== -->
+    <string name="unit_meters">m</string>
+    <string name="unit_kilometers">km</string>
+    <string name="unit_kilometers_per_hour">km/j</string>
+    <string name="unit_gravity">g</string>
+    <string name="format_speed">%.1f km/j</string>
+    <string name="format_distance_km">%.2f km</string>
+    <string name="format_distance_m">%.0f m</string>
+    <string name="format_duration">%02d:%02d:%02d</string>
 
-    <string name="good">Baik</string>
-    <string name="moderate">Sedang</string>
-    <string name="light_damage">Rusak Ringan</string>
-    <string name="heavy_damage">Rusak Berat</string>
-
-    <!-- Surfaces -->
+    <!-- ===== SURFACE TYPES ===== -->
     <string name="asphalt">Aspal</string>
     <string name="concrete">Beton</string>
     <string name="gravel">Kerikil</string>
     <string name="dirt">Tanah</string>
     <string name="other">Lainnya</string>
+    <string name="surface_aspal_desc">Permukaan aspal</string>
+    <string name="surface_beton_desc">Permukaan beton</string>
+    <string name="surface_tanah_desc">Permukaan tanah/tidak diperkeras</string>
 
-    <!-- Status -->
-    <string name="esp32_connected">ESP32: Connected</string>
-    <string name="esp32_disconnected">ESP32: Disconnected</string>
+    <!-- ===== ROAD CONDITIONS ===== -->
+    <string name="good">Baik</string>
+    <string name="moderate">Sedang</string>
+    <string name="light_damage">Rusak Ringan</string>
+    <string name="heavy_damage">Rusak Berat</string>
+    <string name="condition_good_desc">Kondisi sangat baik</string>
+    <string name="condition_fair_desc">Sedikit aus</string>
+    <string name="condition_light_desc">Terdapat retak/lubang kecil</string>
+    <string name="condition_heavy_desc">Kerusakan parah</string>
 
-    <!-- Errors -->
-    <string name="error_speed_too_high">Speed too high. Slow down to &lt; 20 km/h</string>
-    <string name="error_accuracy_poor">GPS accuracy poor. Wait for better signal</string>
-    <string name="error_permissions">Permissions required for tracking</string>
-    <string name="vibration_smooth">Smooth</string>
-    <string name="vibration_moderate">Moderate</string>
-    <string name="vibration_rough">Rough!</string>
+    <!-- ===== CONFIDENCE ===== -->
+    <string name="confidence_high">Tinggi</string>
+    <string name="confidence_medium">Sedang</string>
+    <string name="confidence_low">Rendah</string>
+    <string name="confidence_level">Tingkat Keyakinan: %s</string>
+
+    <!-- ===== VIBRATION ===== -->
+    <string name="vibration_smooth">Halus</string>
+    <string name="vibration_moderate">Sedang</string>
+    <string name="vibration_rough">Kasar!</string>
     <string name="format_vibration">Z: %1$.2fg (%2$s)</string>
     <string name="vibration_default">Z: 0.00g</string>
     <string name="vibration_na">N/A</string>
 
-    <!-- Accuracy status -->
-    <string name="accuracy_excellent">Excellent (%sm)</string>
-    <string name="accuracy_good">Good (%sm)</string>
-    <string name="accuracy_fair">Fair (%sm)</string>
-    <string name="accuracy_poor">Poor (%sm)</string>
+    <!-- ===== GPS ACCURACY ===== -->
+    <string name="accuracy_excellent">Sangat Baik (%sm)</string>
+    <string name="accuracy_good">Baik (%sm)</string>
+    <string name="accuracy_fair">Cukup (%sm)</string>
+    <string name="accuracy_poor">Buruk (%sm)</string>
+    <string name="gps_excellent">GPS: Sangat Baik</string>
+    <string name="gps_good">GPS: Baik</string>
+    <string name="gps_fair">GPS: Cukup</string>
+    <string name="gps_poor">GPS: Buruk</string>
+    <string name="gps_very_poor">GPS: Sangat Buruk/Tidak Ada Sinyal</string>
 
-    <!-- Format strings -->
-    <string name="format_speed">%.1f km/h</string>
-    <string name="format_distance_km">%.2f km</string>
+    <!-- ===== SEVERITY ===== -->
+    <string name="severity_none">Tidak Ada</string>
+    <string name="severity_low">Ringan</string>
+    <string name="severity_medium">Sedang</string>
+    <string name="severity_high">Berat</string>
+    <string name="severity_critical">Kritis</string>
 
-    <!-- New Strings for Updated UI -->
-    <string name="btn_center_map">Center Map</string>
-    <string name="btn_settings">Settings</string>
-    <string name="btn_add_survey">Add Survey</string>
+    <!-- ===== DATA SOURCE ===== -->
+    <string name="data_source_gps">GPS</string>
+    <string name="data_source_esp32">ESP32</string>
+    <string name="data_source_estimated">Estimasi</string>
+    <string name="data_source_sensor_primary">Sumber: Sensor ESP32</string>
+    <string name="data_source_gps_only">Sumber: GPS saja</string>
+    <string name="data_warning_gps_only">⚠️ Data hanya dari GPS</string>
+
+    <!-- ===== MAP ===== -->
+    <string name="map_loading">Memuat peta…</string>
+    <string name="map_loaded">Peta dimuat</string>
+    <string name="map_center_current">Dipusatkan pada lokasi Anda</string>
+    <string name="map_zoom_in">Perbesar</string>
+    <string name="map_zoom_out">Perkecil</string>
+
+    <!-- ===== SURVEY SEGMENT ===== -->
+    <string name="msg_start_segment">Tap pada peta untuk titik awal dan akhir segmen</string>
+    <string name="msg_no_esp32">Tidak bisa membuat segmen. Pastikan ESP32 terhubung dan GPS aktif</string>
+    <string name="msg_segment_cancelled">Pembuatan segmen dibatalkan</string>
+    <string name="msg_segment_start_set">Titik awal ditetapkan</string>
+    <string name="msg_segment_ready">Segmen siap. Keyakinan: %s</string>
+    <string name="segment_creation_started">Pembuatan segmen dimulai</string>
+    <string name="segment_creation_complete">Tap titik akhir pada peta</string>
+    <string name="segment_saved">Survey tersimpan: %s (%s)</string>
+    <string name="segment_save_error">Gagal menyimpan segmen</string>
+    <string name="road_name_empty">Masukkan nama jalan</string>
+    <string name="survey_saved">Survey tersimpan: %s (%s)</string>
+    <string name="notes_hint">Catatan tambahan…</string>
+    <string name="road_name_hint">Masukkan nama jalan</string>
+
+    <!-- ===== SUMMARY SCREEN ===== -->
+    <string name="total_distance">Total Jarak</string>
+    <string name="segment_count">Jumlah Segmen</string>
+    <string name="filter">Filter</string>
+    <string name="statistics">Statistik</string>
+    <string name="export">Ekspor</string>
+    <string name="all">Semua</string>
+    <string name="select_condition">Pilih Kondisi</string>
+    <string name="select_surface">Pilih Permukaan</string>
+    <string name="select_confidence">Pilih Keyakinan</string>
+    <string name="empty_summary_title">Belum ada data survey</string>
+    <string name="empty_summary_message">Mulai survey dan buat segmen untuk melihat ringkasan</string>
+    <string name="session_title_all">Semua Survey</string>
+    <string name="session_title_format">Sesi #%d</string>
+    <string name="export_single_not_available">Ekspor per segmen belum tersedia</string>
+    <string name="edit_not_available">Edit segmen belum tersedia</string>
+    <string name="delete_confirm">Yakin ingin menghapus %s?</string>
+    <string name="segment_deleted">Segmen dihapus</string>
+    <string name="detail_format">Detail: %s</string>
+    <string name="view_on_map">Lihat di Peta</string>
+    <string name="no_data_to_export">Tidak ada data untuk diekspor</string>
+    <string name="csv_export_success">File CSV berhasil dibuat</string>
+    <string name="csv_export_failed">Gagal mengekspor CSV</string>
+    <string name="summary_condition_stats">%s: %.2f km</string>
+    <string name="summary_confidence_stats">%s: %d</string>
+    <string name="summary_total_distance">Total Jarak: %s</string>
+    <string name="summary_avg_speed">Rata-rata Kecepatan: %s</string>
+    <string name="summary_avg_iri">Rata-rata IRI: %s</string>
+    <string name="summary_quality_score">Skor Kualitas: %.1f%%</string>
+    <string name="summary_data_points">Titik Data: %d</string>
+    <string name="summary_duration">Durasi: %s</string>
+
+    <!-- ===== CALIBRATION ===== -->
+    <string name="calibration_distance">Kalibrasi Jarak</string>
+    <string name="calibration_imu">Kalibrasi IMU</string>
+    <string name="calibration_wheel_title">Keliling Roda</string>
+    <string name="calibration_wheel_hint">Masukkan keliling roda (meter)</string>
+    <string name="calibration_z_axis_title">Offset Sumbu Z</string>
+    <string name="calibration_z_axis_hint">Masukkan offset sumbu Z</string>
+    <string name="calibration_success">Kalibrasi berhasil dikirim</string>
+
+    <!-- ===== SETTINGS ===== -->
+    <string name="settings_bluetooth">Bluetooth</string>
+    <string name="settings_gps">GPS</string>
+    <string name="settings_data">Pengumpulan Data</string>
+    <string name="settings_about">Tentang</string>
+    <string name="settings_notifications">Notifikasi</string>
+    <string name="settings_help_support">Bantuan &amp; Dukungan</string>
+    <string name="settings_bluetooth_desc">Konfigurasi perangkat Bluetooth</string>
+    <string name="settings_app_desc">Aplikasi survey dan monitoring jalan</string>
+    <string name="settings_wheel_circumference">Keliling Roda</string>
+    <string name="settings_esp32_config">Konfigurasi ESP32</string>
+    <string name="settings_gps_config">Konfigurasi GPS</string>
+    <string name="settings_coming_soon">Segera hadir</string>
+
+    <!-- ===== HELP ===== -->
+    <string name="help_user_guide">Panduan Pengguna</string>
+    <string name="help_faq">FAQ</string>
+    <string name="help_support">Dukungan</string>
+    <string name="help_contact">Kontak</string>
+    <string name="help_hours">Jam Operasional</string>
+    <string name="help_version">Versi</string>
+    <string name="help_all_rights">Hak cipta dilindungi</string>
+
+    <!-- ===== NOTIFICATIONS ===== -->
+    <string name="notification_channel_name">Tracking Survey</string>
+    <string name="notification_channel_description">Menampilkan status survey dan data</string>
+    <string name="notification_title">RoadSense Survey</string>
+    <string name="notification_text_idle">Siap memulai survey</string>
+    <string name="notification_text_running">Survey sedang berjalan</string>
+    <string name="notification_tracking">RoadSense - ESP32 Primary</string>
+    <string name="notification_connecting">Menghubungkan ke ESP32…</string>
+    <string name="notification_recording">Merekam - ESP32 Primary</string>
+    <string name="notification_paused">Dijeda</string>
+    <string name="notification_connection_failed">Gagal terhubung ke ESP32</string>
+
+    <!-- ===== ERRORS ===== -->
+    <string name="error_bluetooth">Error Bluetooth</string>
+    <string name="error_gps">Error GPS</string>
+    <string name="error_connection">Error Koneksi</string>
+    <string name="error_speed_too_high">Kecepatan terlalu tinggi. Kurangi &lt; 20 km/j</string>
+    <string name="error_accuracy_poor">Akurasi GPS buruk. Tunggu sinyal lebih baik</string>
+    <string name="error_no_bluetooth">Bluetooth tidak tersedia</string>
+    <string name="error_bluetooth_disabled">Bluetooth dimatikan</string>
+    <string name="error_esp32_not_found">Perangkat ESP32 tidak ditemukan</string>
+    <string name="error_connection_failed">Koneksi gagal</string>
+    <string name="error_survey_already_running">Survey sudah berjalan</string>
+    <string name="error_no_active_survey">Tidak ada survey aktif</string>
+
+    <!-- ===== COMMON BUTTONS ===== -->
+    <string name="cancel">Batal</string>
+    <string name="save">Simpan</string>
+    <string name="confirm">Konfirmasi</string>
+    <string name="yes">Ya</string>
+    <string name="no">Tidak</string>
+    <string name="ok">OK</string>
+    <string name="retry">Coba Lagi</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_delete">Hapus</string>
+    <string name="menu_export">Ekspor Data</string>
+    <string name="menu_delete">Hapus Survey</string>
+    <string name="menu_share">Bagikan</string>
+    <string name="dialog_delete_title">Hapus Survey?</string>
+    <string name="dialog_delete_message">Tindakan ini tidak dapat dibatalkan.</string>
+    <string name="btn_delete">Hapus</string>
+    <string name="btn_cancel">Batal</string>
+    <!-- ===== BLUETOOTH & ESP32 ===== -->
+
+    <string name="esp32_disconnected">ESP32 Terputus</string>
+
+    <!-- ===== LABELS ===== -->
+    <string name="speed_label">Kecepatan</string>
+    <string name="distance_label">Jarak</string>
+    <string name="vibration_label">Getaran</string>
+
+    <!-- ===== SURVEY CONTROL BUTTONS (untuk layout dan kode) ===== -->
     <string name="btn_start">START</string>
     <string name="btn_stop">STOP</string>
     <string name="btn_pause">PAUSE</string>
     <string name="btn_resume">RESUME</string>
 
-    <string name="status_ready_ui">READY</string>
-    <string name="status_recording">RECORDING</string>
-    <string name="status_paused_ui">PAUSED</string>
-    <string name="status_creating_segment">CREATING SEGMENT</string>
 
-    <string name="gps_excellent">GPS: Excellent</string>
-    <string name="gps_good">GPS: Good</string>
-    <string name="gps_fair">GPS: Fair</string>
-    <string name="gps_poor">GPS: Poor</string>
-    <string name="gps_very_poor">GPS: Very Poor/No Signal</string>
 
-    <string name="msg_start_segment">Tap pada peta untuk titik awal dan akhir segment</string>
-    <string name="msg_no_esp32">Tidak bisa buat segment. Pastikan ESP32 terhubung dan GPS aktif</string>
-    <string name="msg_segment_cancelled">Segment creation cancelled</string>
-    <string name="msg_segment_start_set">Titik awal ditetapkan</string>
-    <string name="msg_segment_ready">Segment siap. Confidence: %s</string>
-    <string name="msg_map_centered">Map centered on current location</string>
-
-    <string name="dialog_stop_title">Stop Tracking</string>
-    <string name="dialog_stop_message">Apakah Anda yakin ingin menghentikan tracking?</string>
-    <string name="dialog_settings_title">Settings</string>
-    <string name="dialog_settings_wheel">Wheel Circumference</string>
-    <string name="dialog_settings_esp32">ESP32 Settings</string>
-    <string name="dialog_settings_gps">GPS Settings</string>
-
-    <string name="speed_label">Speed</string>
-    <string name="distance_label">Distance</string>
-    <string name="accuracy_label">Accuracy</string>
-    <string name="vibration_label">Vibration</string>
-
-    <string name="notification_tracking">RoadSense - ESP32 Primary</string>
-    <string name="notification_connecting">Connecting to ESP32...</string>
-    <string name="notification_recording">Recording - ESP32 Primary</string>
-    <string name="notification_paused">Paused</string>
-    <string name="notification_connection_failed">ESP32 Connection Failed</string>
-
-    <string name="confidence_high">High</string>
-    <string name="confidence_medium">Medium</string>
-    <string name="confidence_low">Low</string>
-
-    <string name="segment_creation_started">Segment creation started</string>
-    <string name="segment_creation_complete">Tap titik akhir pada peta</string>
-    <string name="segment_creation_cancelled">Segment creation cancelled</string>
-    <string name="segment_saved">Survey saved: %s (%s)</string>
-    <string name="segment_save_error">Failed to save segment</string>
-
-    <string name="road_name_empty">Please enter road name</string>
-    <string name="survey_saved">Survey saved: %s (%s)</string>
-
-    <string name="gps_status_searching">GPS: Searching...</string>
-    <string name="gps_status_available">GPS: Available</string>
-    <string name="gps_status_poor_signal">GPS: Poor Signal</string>
-    <string name="gps_status_error">GPS: Error</string>
-
-    <string name="esp32_status_connecting">ESP32: Connecting...</string>
-    <string name="esp32_status_connected">ESP32: Connected</string>
-    <string name="esp32_status_disconnected">ESP32: Disconnected</string>
-    <string name="esp32_status_error">ESP32: Error</string>
-
-    <string name="tracking_starting">Starting tracking...</string>
-    <string name="tracking_started">Tracking started successfully</string>
-    <string name="tracking_stopping">Stopping tracking...</string>
-    <string name="tracking_stopped">Tracking stopped successfully</string>
-    <string name="tracking_paused">Tracking paused</string>
-    <string name="tracking_resumed">Tracking resumed</string>
-    <string name="confidence_level">Confidence Level: %s</string>
-
-    <string name="bluetooth_permission_required">Bluetooth permission required</string>
-    <string name="location_permission_required">Location permission required</string>
-    <string name="permission_denied">Permission denied</string>
-    <string name="permission_granted">Permission granted</string>
-
-    <string name="settings_wheel_circumference">Wheel Circumference</string>
-    <string name="settings_esp32_config">ESP32 Configuration</string>
-    <string name="settings_gps_config">GPS Configuration</string>
-    <string name="settings_coming_soon">Coming soon</string>
-
-    <string name="unit_meters">m</string>
-    <string name="unit_kilometers">km</string>
-    <string name="unit_kilometers_per_hour">km/h</string>
-    <string name="unit_gravity">g</string>
-
-    <string name="map_loading">Loading map...</string>
-    <string name="map_loaded">Map loaded</string>
-    <string name="map_center_current">Centered on current location</string>
-    <string name="map_zoom_in">Zoom in</string>
-    <string name="map_zoom_out">Zoom out</string>
-
-    <string name="connection_retrying">Retrying connection... (Attempt %d)</string>
-    <string name="connection_max_attempts">Max connection attempts reached</string>
-    <string name="connection_lost">Connection lost</string>
-    <string name="connection_restored">Connection restored</string>
-
-    <string name="data_source_gps">GPS</string>
-    <string name="data_source_esp32">ESP32</string>
-    <string name="data_source_estimated">Estimated</string>
-
-    <string name="severity_none">None</string>
-    <string name="severity_low">Low</string>
-    <string name="severity_medium">Medium</string>
-    <string name="severity_high">High</string>
-    <string name="severity_critical">Critical</string>
-
-    <string name="notes_hint">Additional notes...</string>
-    <string name="road_name_hint">Enter road name</string>
-
-    <string name="cancel">Cancel</string>
-    <string name="save">Save</string>
-    <string name="confirm">Confirm</string>
-    <string name="yes">Yes</string>
-    <string name="no">No</string>
-    <string name="ok">OK</string>
-    <string name="retry">Retry</string>
-
-    <!-- Navigation -->
-    <string name="nav_map_survey">Survey</string>
-    <string name="nav_summary">Summary</string>
-    <string name="nav_settings">Settings</string>
-    <string name="nav_calibration">Calibration</string>
-
-    <!-- Survey Screen -->
-    <string name="btn_start_survey">Start Survey</string>
-    <string name="btn_stop_survey">Stop Survey</string>
-    <string name="btn_pause_survey">Pause</string>
-    <string name="btn_resume_survey">Resume</string>
-    <string name="btn_connect_bluetooth">Connect Bluetooth</string>
-
-    <!-- Status -->
-    <string name="status_idle">Ready</string>
-    <string name="status_connecting">Connecting…</string>
-
-    <!-- Bluetooth -->
-    <string name="bluetooth_connected">Connected to ESP32</string>
-    <string name="bluetooth_disconnected">Bluetooth Disconnected</string>
-    <string name="bluetooth_connecting">Connecting to ESP32…</string>
-    <string name="bluetooth_error">Bluetooth Error: %s</string>
-
-    <!-- GPS -->
-    <string name="gps_available">GPS Available (±%1$.1fm)</string>
-    <string name="gps_searching">Searching GPS…</string>
-    <string name="gps_disabled">GPS Disabled</string>
-    <string name="gps_unavailable">GPS Unavailable (Survey uses Encoder)</string>
-
-    <!-- Data Display -->
-    <string name="label_distance">Distance</string>
-    <string name="label_speed">Speed</string>
-    <string name="label_iri">IRI (Roughness)</string>
-    <string name="label_quality">Road Quality</string>
-    <string name="label_session_id">Session ID</string>
-    <string name="label_duration">Duration</string>
-    <string name="label_data_points">Data Points</string>
-
-    <!-- Units -->
-    <string name="unit_distance_km">%.2f km</string>
-    <string name="unit_distance_m">%.1f m</string>
-    <string name="unit_speed">%.1f km/h</string>
-    <string name="unit_iri">%.2f</string>
-    <string name="unit_duration">%02d:%02d:%02d</string>
-
-    <!-- Quality Ratings -->
-    <string name="quality_excellent">EXCELLENT</string>
-    <string name="quality_good">GOOD</string>
-    <string name="quality_fair">FAIR</string>
-    <string name="quality_poor">POOR</string>
-    <string name="quality_bad">BAD</string>
-
-    <!-- Calibration -->
-    <string name="calibration_wheel_title">Wheel Circumference</string>
-    <string name="calibration_wheel_hint">Enter wheel circumference in meters</string>
-    <string name="calibration_z_axis_title">Z-Axis Offset</string>
-    <string name="calibration_z_axis_hint">Enter Z-axis offset</string>
-    <string name="btn_calibrate">Calibrate</string>
-    <string name="calibration_success">Calibration sent successfully</string>
-
-    <!-- Errors -->
-    <string name="error_no_bluetooth">Bluetooth not available</string>
-    <string name="error_bluetooth_disabled">Bluetooth is disabled</string>
-    <string name="error_esp32_not_found">ESP32 device not found</string>
-    <string name="error_connection_failed">Connection failed</string>
-    <string name="error_no_permission">Required permissions not granted</string>
-    <string name="error_survey_already_running">Survey already running</string>
-    <string name="error_no_active_survey">No active survey</string>
-
-    <!-- Permissions -->
-    <string name="permission_rationale_title">Permissions Required</string>
-    <string name="permission_rationale_message">RoadSense requires Location and Bluetooth permissions to function properly.</string>
-    <string name="btn_grant_permissions">Grant Permissions</string>
-    <string name="btn_open_settings">Open Settings</string>
-
-    <!-- Notifications -->
-    <string name="notification_channel_name">Survey Tracking</string>
-    <string name="notification_channel_description">Shows survey status and data</string>
-    <string name="notification_title">RoadSense Survey</string>
-    <string name="notification_text_idle">Ready to start survey</string>
-    <string name="notification_text_running">Survey in progress</string>
-
-    <!-- Summary -->
-    <string name="summary_no_data">No survey data available</string>
-    <string name="summary_total_distance">Total Distance: %s</string>
-    <string name="summary_avg_speed">Average Speed: %s</string>
-    <string name="summary_avg_iri">Average IRI: %s</string>
-    <string name="summary_quality_score">Quality Score: %.1f%%</string>
-    <string name="summary_data_points">Data Points: %d</string>
-    <string name="summary_duration">Duration: %s</string>
-
-    <!-- Menu -->
-    <string name="menu_export">Export Data</string>
-    <string name="menu_delete">Delete Survey</string>
-    <string name="menu_share">Share</string>
-
-    <!-- Dialog -->
-    <string name="dialog_delete_title">Delete Survey?</string>
-    <string name="dialog_delete_message">This action cannot be undone.</string>
-    <string name="btn_delete">Delete</string>
-    <string name="btn_cancel">Cancel</string>
-
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
-    <string name="tracking_service_description">Mengelola koneksi Bluetooth dengan ESP32, merekam data sensor, dan melacak posisi GPS untuk survey jalan. Service ini tetap berjalan saat aplikasi di latar belakang.</string>
-
-    <string name="action_edit">Edit</string>
-    <string name="action_delete">Delete</string>
 </resources>

@@ -63,10 +63,13 @@ object AppModule {
     fun provideRealtimeRoadsenseBus(): RealtimeRoadsenseBus = RealtimeRoadsenseBus()
 
     // ===== GATEWAYS =====
+    // 🟢 PERBAIKAN: Tambahkan parameter @ApplicationContext Context
     @Provides
     @Singleton
-    fun provideBluetoothGateway(bus: RealtimeRoadsenseBus): BluetoothGateway =
-        BluetoothGateway(bus)
+    fun provideBluetoothGateway(
+        @ApplicationContext context: Context,
+        bus: RealtimeRoadsenseBus
+    ): BluetoothGateway = BluetoothGateway(context, bus)
 
     @Provides
     @Singleton

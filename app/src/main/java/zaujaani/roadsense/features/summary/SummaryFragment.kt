@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.*
 import androidx.core.content.FileProvider
+import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -25,7 +26,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 @AndroidEntryPoint
-class SummaryFragment : Fragment(), SummaryAdapter.SummaryActions {
+class SummaryFragment : Fragment(), SummaryAdapter.SummaryActions, MenuProvider {
 
     private var _binding: FragmentSummaryBinding? = null
     private val binding get() = _binding!!
@@ -43,12 +44,14 @@ class SummaryFragment : Fragment(), SummaryAdapter.SummaryActions {
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentSummaryBinding.inflate(inflater, container, false)
-        setHasOptionsMenu(true) // 🔥 untuk sort menu
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // ✅ Modern: MenuProvider (tidak deprecated)
+        requireActivity().addMenuProvider(this, viewLifecycleOwner)
 
         setupToolbar()
         setupRecyclerView()
@@ -57,6 +60,49 @@ class SummaryFragment : Fragment(), SummaryAdapter.SummaryActions {
         observeViewModel()
 
         viewModel.loadSummary(sessionId)
+    }
+
+    // ========== MENU PROVIDER ==========
+    override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+        menuInflater.inflate(R.menu.menu_summary_sort, menu)
+    }
+
+    override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+        return when (menuItem.itemId) {
+            R.id.action_sort_date_desc -> {
+                viewModel.setSortBy(SummaryViewModel.SortBy.DATE_DESC)
+                true
+            }
+            R.id.action_sort_date_asc -> {
+                viewModel.setSortBy(SummaryViewModel.SortBy.DATE_ASC)
+                true
+            }
+            R.id.action_sort_distance_desc -> {
+                viewModel.setSortBy(SummaryViewModel.SortBy.DISTANCE_DESC)
+                true
+            }
+            R.id.action_sort_distance_asc -> {
+                viewModel.setSortBy(SummaryViewModel.SortBy.DISTANCE_ASC)
+                true
+            }
+            R.id.action_sort_severity_desc -> {
+                viewModel.setSortBy(SummaryViewModel.SortBy.SEVERITY_DESC)
+                true
+            }
+            R.id.action_sort_severity_asc -> {
+                viewModel.setSortBy(SummaryViewModel.SortBy.SEVERITY_ASC)
+                true
+            }
+            R.id.action_sort_speed_desc -> {
+                viewModel.setSortBy(SummaryViewModel.SortBy.SPEED_DESC)
+                true
+            }
+            R.id.action_sort_speed_asc -> {
+                viewModel.setSortBy(SummaryViewModel.SortBy.SPEED_ASC)
+                true
+            }
+            else -> false
+        }
     }
 
     // ========== TOOLBAR ==========
@@ -91,22 +137,21 @@ class SummaryFragment : Fragment(), SummaryAdapter.SummaryActions {
     // ========== SWIPE REFRESH ==========
     private fun setupSwipeRefresh() {
         binding.swipeRefresh.setOnRefreshListener {
-            viewModel.refresh() // ✅ USED!
+            viewModel.refresh()
         }
     }
 
     // ========== CLICK LISTENERS ==========
     private fun setupClickListeners() {
         binding.btnFilter?.setOnClickListener { showFilterDialog() }
-        binding.btnExportAll?.setOnClickListener { exportAllToCsv() } // ✅ USED!
+        binding.btnExportAll?.setOnClickListener { exportAllToCsv() }
         binding.btnStats?.setOnClickListener { showStatistics() }
     }
 
-    // ========== OBSERVE VIEWMODEL (STATE FLOW) ==========
+    // ========== OBSERVE VIEWMODEL ==========
     private fun observeViewModel() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
-                // 🔥 filteredData adalah StateFlow, bukan LiveData
                 viewModel.filteredData.collectLatest { list ->
                     binding.swipeRefresh.isRefreshing = false
                     if (list.isNotEmpty()) {
@@ -125,21 +170,10 @@ class SummaryFragment : Fragment(), SummaryAdapter.SummaryActions {
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
-                viewModel.isLoading.collectLatest { loading ->
-                    // Jika ada progress bar, uncomment
-                    // binding.progressBar?.isVisible = loading
-                }
-            }
-        }
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 viewModel.error.collectLatest { errorMsg ->
-                    // Jika ada TextView error, uncomment
-                    // binding.tvError?.isVisible = errorMsg != null
-                    // binding.tvError?.text = errorMsg ?: ""
                     if (errorMsg != null) {
                         Timber.e("Summary error: $errorMsg")
+                        // showToast(errorMsg) // optional
                     }
                 }
             }
@@ -148,7 +182,7 @@ class SummaryFragment : Fragment(), SummaryAdapter.SummaryActions {
 
     // ========== STATISTIK ==========
     private fun updateStatistics(list: List<RoadSegmentSummary>) {
-        val stats = viewModel.getStatistics() // ✅ USED!
+        val stats = viewModel.getStatistics()
         binding.tvTotalDistance?.text = String.format(
             Locale.getDefault(),
             "%.2f km",
@@ -174,31 +208,27 @@ class SummaryFragment : Fragment(), SummaryAdapter.SummaryActions {
 
     // ========== FILTER DIALOG ==========
     private fun showFilterDialog() {
-        val options = viewModel.getFilterOptions() // ✅ USED!
+        val options = viewModel.getFilterOptions()
 
         val conditions = options.conditions.toMutableList().apply { add(0, "Semua") }
         val surfaces = options.surfaces.toMutableList().apply { add(0, "Semua") }
         val confidences = options.confidences.toMutableList().apply { add(0, "Semua") }
 
-        // Pilih kondisi
         showSingleChoiceDialog(
             title = "Pilih Kondisi",
             items = conditions
         ) { selectedCondition ->
             val condition = selectedCondition.takeIf { it != "Semua" }
-            // Pilih surface
             showSingleChoiceDialog(
                 title = "Pilih Surface",
                 items = surfaces
             ) { selectedSurface ->
                 val surface = selectedSurface.takeIf { it != "Semua" }
-                // Pilih confidence
                 showSingleChoiceDialog(
                     title = "Pilih Confidence",
                     items = confidences
                 ) { selectedConfidence ->
                     val confidence = selectedConfidence.takeIf { it != "Semua" }
-                    // ✅ TERAPKAN FILTER
                     viewModel.setFilterCondition(condition)
                     viewModel.setFilterSurface(surface)
                     viewModel.setFilterConfidence(confidence)
@@ -221,54 +251,10 @@ class SummaryFragment : Fragment(), SummaryAdapter.SummaryActions {
             .show()
     }
 
-    // ========== SORT DIALOG (VIA MENU) ==========
-    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
-        inflater.inflate(R.menu.menu_summary_sort, menu) // 🔥 buat menu file
-        super.onCreateOptionsMenu(menu, inflater)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_sort_date_desc -> {
-                viewModel.setSortBy(SummaryViewModel.SortBy.DATE_DESC)
-                true
-            }
-            R.id.action_sort_date_asc -> {
-                viewModel.setSortBy(SummaryViewModel.SortBy.DATE_ASC)
-                true
-            }
-            R.id.action_sort_distance_desc -> {
-                viewModel.setSortBy(SummaryViewModel.SortBy.DISTANCE_DESC)
-                true
-            }
-            R.id.action_sort_distance_asc -> {
-                viewModel.setSortBy(SummaryViewModel.SortBy.DISTANCE_ASC)
-                true
-            }
-            R.id.action_sort_severity_desc -> {
-                viewModel.setSortBy(SummaryViewModel.SortBy.SEVERITY_DESC)
-                true
-            }
-            R.id.action_sort_severity_asc -> {
-                viewModel.setSortBy(SummaryViewModel.SortBy.SEVERITY_ASC)
-                true
-            }
-            R.id.action_sort_speed_desc -> {
-                viewModel.setSortBy(SummaryViewModel.SortBy.SPEED_DESC)
-                true
-            }
-            R.id.action_sort_speed_asc -> {
-                viewModel.setSortBy(SummaryViewModel.SortBy.SPEED_ASC)
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
-    }
-
     // ========== EXPORT CSV ==========
     private fun exportAllToCsv() {
         lifecycleScope.launch {
-            val csvData = viewModel.exportToCsv() // ✅ USED!
+            val csvData = viewModel.exportToCsv()
             if (csvData.isBlank()) {
                 showToast("Tidak ada data untuk diekspor")
                 return@launch
@@ -306,7 +292,7 @@ class SummaryFragment : Fragment(), SummaryAdapter.SummaryActions {
 
     // ========== STATISTICS DIALOG ==========
     private fun showStatistics() {
-        val stats = viewModel.getStatistics() // ✅ USED!
+        val stats = viewModel.getStatistics()
         val message = buildString {
             appendLine("📊 Statistik Survey")
             appendLine()
@@ -339,11 +325,13 @@ class SummaryFragment : Fragment(), SummaryAdapter.SummaryActions {
             .show()
     }
 
-    // ========== SUMMARY ACTIONS (dari adapter) ==========
+    // ========== SUMMARY ACTIONS ==========
+    @Suppress("UNUSED_PARAMETER")
     override fun onExportClicked(summary: RoadSegmentSummary) {
         showToast("Export single segment belum tersedia")
     }
 
+    @Suppress("UNUSED_PARAMETER")
     override fun onEditClicked(summary: RoadSegmentSummary) {
         showToast("Edit segmen belum tersedia")
     }

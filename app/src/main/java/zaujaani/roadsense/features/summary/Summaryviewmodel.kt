@@ -15,7 +15,9 @@ class SummaryViewModel @Inject constructor(
     private val repository: SurveyRepository
 ) : ViewModel() {
 
+    // Backing property – bisa tetap public jika diperlukan, di‑suppress warning
     private val _summaryData = MutableStateFlow<List<RoadSegmentSummary>>(emptyList())
+    @Suppress("Unused")
     val summaryData: StateFlow<List<RoadSegmentSummary>> = _summaryData
 
     private val _filteredData = MutableStateFlow<List<RoadSegmentSummary>>(emptyList())
@@ -28,6 +30,7 @@ class SummaryViewModel @Inject constructor(
     val error: StateFlow<String?> = _error
 
     private val _selectedSessionId = MutableStateFlow<Long>(-1L)
+    @Suppress("Unused")
     val selectedSessionId: StateFlow<Long> = _selectedSessionId
 
     private val _filterCondition = MutableStateFlow<String?>(null)
@@ -43,7 +46,6 @@ class SummaryViewModel @Inject constructor(
     }
 
     init {
-        // Apply filters whenever they change
         combine(
             _summaryData,
             _filterCondition,
@@ -65,7 +67,6 @@ class SummaryViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val summaries = if (sessionId == -1L) {
-                    // Get all segments from all sessions
                     getAllSessionsSegments()
                 } else {
                     repository.getSummaryBySession(sessionId)
@@ -86,9 +87,9 @@ class SummaryViewModel @Inject constructor(
         val allSegments = mutableListOf<RoadSegmentSummary>()
 
         try {
-            // Get all sessions
+            // ✅ explicit type argument dihapus (inferred)
             repository.getAllSessions()
-                .first() // Get first emission
+                .first()
                 .forEach { session ->
                     try {
                         val segments = repository.getSummaryBySession(session.id)
@@ -130,7 +131,6 @@ class SummaryViewModel @Inject constructor(
     ): List<RoadSegmentSummary> {
         var filtered = data
 
-        // Apply filters
         condition?.takeIf { it.isNotBlank() }?.let { filter ->
             filtered = filtered.filter { it.segment.condition.equals(filter, ignoreCase = true) }
         }
@@ -143,8 +143,7 @@ class SummaryViewModel @Inject constructor(
             filtered = filtered.filter { it.segment.confidence.equals(filter, ignoreCase = true) }
         }
 
-        // Apply sorting
-        filtered = when (sortBy) {
+        return when (sortBy) {
             SortBy.DATE_ASC -> filtered.sortedBy { it.segment.timestamp }
             SortBy.DATE_DESC -> filtered.sortedByDescending { it.segment.timestamp }
             SortBy.DISTANCE_ASC -> filtered.sortedBy { it.segment.distanceMeters }
@@ -154,8 +153,6 @@ class SummaryViewModel @Inject constructor(
             SortBy.SPEED_ASC -> filtered.sortedBy { it.segment.avgSpeed }
             SortBy.SPEED_DESC -> filtered.sortedByDescending { it.segment.avgSpeed }
         }
-
-        return filtered
     }
 
     fun getFilterOptions(): FilterOptions {
