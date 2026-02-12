@@ -81,7 +81,5 @@ class SurveyRepository @Inject constructor(
 
     suspend fun updateRoadSegment(segment: RoadSegment) = roadSegmentDao.updateRoadSegment(segment)
 
-    // ============ LEGACY TELAH DIHAPUS ============
-    // Semua fungsi SurveyEntity & TelemetryEntity dihapus.
-    // Jika ada error compile, migrasikan ViewModel yang masih memanggilnya.
+
 }

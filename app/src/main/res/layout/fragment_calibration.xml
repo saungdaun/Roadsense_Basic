@@ -10,11 +10,7 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <com.google.android.material.appbar.MaterialToolbar
-            android:id="@+id/toolbar"
-            android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            app:navigationIcon="@drawable/ic_arrow_back" />
+
 
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"

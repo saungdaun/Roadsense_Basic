@@ -27,18 +27,11 @@ class SettingsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        setupToolbar()
         setupSettings()
         setupObservers()
     }
 
-    private fun setupToolbar() {
-        binding.toolbar.setNavigationOnClickListener {
-            // ✅ FIX: Pakai OnBackPressedDispatcher, gak pakai onBackPressed() deprecated
-            requireActivity().onBackPressedDispatcher.onBackPressed()
-        }
-    }
+
 
     private fun setupSettings() {
         // GPS Settings

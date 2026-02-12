@@ -5,7 +5,6 @@
     android:id="@+id/nav_graph"
     app:startDestination="@id/mapSurveyFragment">
 
-    <!-- Map Survey Fragment - Main tracking screen -->
     <fragment
         android:id="@+id/mapSurveyFragment"
         android:name="zaujaani.roadsense.features.map.MapSurveyFragment"
@@ -15,17 +14,14 @@
         <action
             android:id="@+id/action_mapSurvey_to_summary"
             app:destination="@id/summaryFragment" />
-
         <action
             android:id="@+id/action_mapSurvey_to_calibration"
             app:destination="@id/calibrationFragment" />
-
         <action
             android:id="@+id/action_mapSurvey_to_settings"
             app:destination="@id/settingsFragment" />
     </fragment>
 
-    <!-- Summary Fragment - View survey results -->
     <fragment
         android:id="@+id/summaryFragment"
         android:name="zaujaani.roadsense.features.summary.SummaryFragment"
@@ -44,7 +40,6 @@
             app:popUpToInclusive="false" />
     </fragment>
 
-    <!-- Calibration Fragment -->
     <fragment
         android:id="@+id/calibrationFragment"
         android:name="zaujaani.roadsense.features.calibration.CalibrationFragment"
@@ -58,7 +53,6 @@
             app:popUpToInclusive="false" />
     </fragment>
 
-    <!-- Settings Fragment -->
     <fragment
         android:id="@+id/settingsFragment"
         android:name="zaujaani.roadsense.features.settings.SettingsFragment"

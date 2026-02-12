@@ -36,7 +36,7 @@ class CalibrationFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        setupToolbar()
+
         setupInputListeners()
         setupSaveButton()
         observeViewModel()
@@ -45,12 +45,7 @@ class CalibrationFragment : Fragment() {
         viewModel.loadCalibration() // ✅ USED!
     }
 
-    private fun setupToolbar() {
-        binding.toolbar.setNavigationOnClickListener {
-            requireActivity().onBackPressedDispatcher.onBackPressed()
-        }
-        binding.toolbar.title = "Kalibrasi ESP32"
-    }
+
 
     private fun setupInputListeners() {
         // Listener untuk update ringkasan otomatis setiap kali input berubah

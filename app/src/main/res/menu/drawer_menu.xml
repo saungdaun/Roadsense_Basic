@@ -2,34 +2,34 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
     <group android:checkableBehavior="single">
+
         <item
-            android:id="@+id/nav_survey"
+            android:id="@+id/mapSurveyFragment"
             android:icon="@drawable/ic_survey"
             android:title="Survey" />
 
         <item
-            android:id="@+id/nav_data"
+            android:id="@+id/summaryFragment"
             android:icon="@drawable/ic_data"
             android:title="Data" />
 
         <item
-            android:id="@+id/nav_report"
-            android:icon="@drawable/ic_report"
-            android:title="Report" />
+            android:id="@+id/calibrationFragment"
+            android:icon="@drawable/ic_calibrations"
+            android:title="Calibration" />
 
         <item
-            android:id="@+id/nav_settings"
+            android:id="@+id/settingsFragment"
             android:icon="@drawable/ic_settings"
             android:title="Settings" />
 
+        <!-- Menu tanpa destination di nav_graph, handle manual -->
         <item
             android:id="@+id/nav_help"
             android:icon="@drawable/ic_help"
             android:title="Help" />
-        <item
-            android:id="@+id/nav_calibration"
-            android:icon="@drawable/ic_calibrations"
-            android:title="Calibration" />
+
+
     </group>
 
 </menu>
