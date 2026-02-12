@@ -257,50 +257,59 @@ class TrackingForegroundService : Service() {
     private fun buildQualityFlags(
         sensorData: ESP32SensorData,
         gpsLocation: android.location.Location?
-    ): List<String> {
-        val flags = mutableListOf<String>()
+    ): List<String> = buildList {
 
-        when {
-            gpsLocation == null -> flags.add(QualityFlag.GPS_UNAVAILABLE.name)
-            gpsLocation.accuracy > 20f -> flags.add("GPS_POOR_ACCURACY")
+        // ---- GPS ----
+        if (gpsLocation == null) {
+            add(QualityFlag.GPS_UNAVAILABLE.name)
+        } else if (gpsLocation.accuracy > 20f) {
+            add("GPS_POOR_ACCURACY")
         }
 
-        when {
-            sensorData.currentSpeed < 1f -> flags.add("VEHICLE_STOPPED")
-            sensorData.currentSpeed > 60f -> flags.add(QualityFlag.SPEED_TOO_HIGH.name)
+        // ---- Speed ----
+        val speed = sensorData.currentSpeed
+        if (speed < 1f) {
+            add("VEHICLE_STOPPED")
+        } else if (speed > 60f) {
+            add(QualityFlag.SPEED_TOO_HIGH.name)
         }
 
+        // ---- Vibration ----
         if (kotlin.math.abs(sensorData.accelZ) > 2.5f) {
-            flags.add(QualityFlag.VIBRATION_SPIKE.name)
+            add(QualityFlag.VIBRATION_SPIKE.name)
         }
 
+        // ---- Battery ----
         sensorData.batteryVoltage?.let { voltage ->
             when {
-                voltage < 3.4f -> flags.add("BATTERY_CRITICAL")
-                voltage < 3.6f -> flags.add("BATTERY_LOW")
+                voltage < 3.4f -> add("BATTERY_CRITICAL")
+                voltage < 3.6f -> add("BATTERY_LOW")
+                else -> Unit
             }
         }
 
-        sensorData.errorCount?.takeIf { it > 0 }?.let {
-            flags.add("CRC_ERRORS:$it")
-        }
-
-        return flags
+        // ---- CRC Errors ----
+        sensorData.errorCount
+            ?.takeIf { it > 0 }
+            ?.let { add("CRC_ERRORS:$it") }
     }
 
     private fun calculateQuality(
         sensorData: ESP32SensorData,
         gpsLocation: android.location.Location?
     ): String {
+
         val sensorScore = sensorData.calculateQualityScore()
-        val gpsGood = gpsLocation != null && gpsLocation.accuracy < 10f
+
+        val gpsGood = gpsLocation?.accuracy?.let { it < 10f } == true
 
         return when {
             sensorScore > 0.8f && gpsGood -> "HIGH"
-            sensorScore > 0.5f            -> "MEDIUM"
-            else                          -> "LOW"
+            sensorScore > 0.5f -> "MEDIUM"
+            else -> "LOW"
         }
     }
+
 
     // -------------------------------------------------------------------------
     //  🎮 SURVEY CONTROL
