@@ -3,6 +3,8 @@ package zaujaani.roadsense.features.map
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.DashPathEffect
+import android.graphics.Paint
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -19,7 +21,9 @@ import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.modules.OfflineTileProvider
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.tileprovider.util.SimpleRegisterReceiver
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
@@ -32,15 +36,10 @@ import zaujaani.roadsense.databinding.FragmentMapSurveyBinding
 import zaujaani.roadsense.domain.model.Confidence
 import zaujaani.roadsense.domain.model.RoadCondition
 import zaujaani.roadsense.domain.model.SurfaceType
+import zaujaani.roadsense.domain.usecase.ZAxisValidation
 import zaujaani.roadsense.features.survey.SurveyBottomSheet
 import java.io.File
 import java.util.*
-import org.osmdroid.tileprovider.modules.OfflineTileProvider
-import org.osmdroid.tileprovider.util.SimpleRegisterReceiver
-
-import android.graphics.Paint
-import android.graphics.DashPathEffect
-
 
 @AndroidEntryPoint
 class MapSurveyFragment : Fragment() {
@@ -50,7 +49,6 @@ class MapSurveyFragment : Fragment() {
 
     private val viewModel: MapViewModel by viewModels()
 
-    // OSMDroid components
     private lateinit var mapView: MapView
     private lateinit var trackingPolyline: Polyline
     private lateinit var segmentPolyline: Polyline
@@ -59,7 +57,6 @@ class MapSurveyFragment : Fragment() {
     private var currentLocationMarker: Marker? = null
     private var mapTapOverlay: Overlay? = null
 
-    // Permission request
     private val locationPermissionRequest = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -67,13 +64,13 @@ class MapSurveyFragment : Fragment() {
         if (allGranted) {
             Timber.d("✅ Location permissions granted")
             if (_binding != null) {
-                Snackbar.make(binding.root, "GPS ready for position reference", Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, getString(R.string.gps_ready), Snackbar.LENGTH_SHORT).show()
             }
         } else {
             if (_binding != null) {
                 Snackbar.make(
                     binding.root,
-                    "⚠️ Survey tetap bisa berjalan tanpa GPS (menggunakan sensor)",
+                    getString(R.string.survey_without_gps),
                     Snackbar.LENGTH_LONG
                 ).show()
             }
@@ -103,12 +100,7 @@ class MapSurveyFragment : Fragment() {
         }
     }
 
-    /**
-     * Inisialisasi peta OSMdroid + offline tiles
-     */
     private fun initializeMap() {
-
-        // ---------- OSM CONFIG ----------
         val ctx = requireContext()
 
         val baseDir = File(ctx.getExternalFilesDir(null), "osmdroid")
@@ -122,125 +114,73 @@ class MapSurveyFragment : Fragment() {
             userAgentValue = ctx.packageName
             osmdroidTileCache = tileCacheDir
 
-            val sharedPrefs =
-                ctx.getSharedPreferences("osmdroid_prefs", Context.MODE_PRIVATE)
-
+            val sharedPrefs = ctx.getSharedPreferences("osmdroid_prefs", Context.MODE_PRIVATE)
             load(ctx, sharedPrefs)
         }
 
         mapView = binding.mapView
 
-        // ---------- OFFLINE TILE PROVIDER ----------
         val archiveFiles = tileArchiveDir.listFiles { file ->
-            file.extension == "sqlite" ||
-                    file.extension == "zip" ||
-                    file.extension == "mbtiles"
+            file.extension == "sqlite" || file.extension == "zip" || file.extension == "mbtiles"
         }
 
         if (!archiveFiles.isNullOrEmpty()) {
-
             try {
-                val tileProvider = OfflineTileProvider(
-                    SimpleRegisterReceiver(ctx),
-                    archiveFiles
-                )
-
+                val tileProvider = OfflineTileProvider(SimpleRegisterReceiver(ctx), archiveFiles)
                 mapView.setTileProvider(tileProvider)
-
                 Timber.d("✅ Offline tiles loaded (${archiveFiles.size} files)")
-
             } catch (e: Exception) {
-
                 Timber.e(e, "Offline tile failed — fallback to MAPNIK")
-
                 mapView.setTileSource(TileSourceFactory.MAPNIK)
             }
-
         } else {
-
             Timber.d("No offline tiles found — using MAPNIK")
-
             mapView.setTileSource(TileSourceFactory.MAPNIK)
         }
 
-        // ---------- MAP SETTINGS ----------
         mapView.apply {
-
-            zoomController.setVisibility(
-                CustomZoomButtonsController.Visibility.SHOW_AND_FADEOUT
-            )
-
+            zoomController.setVisibility(CustomZoomButtonsController.Visibility.SHOW_AND_FADEOUT)
             setMultiTouchControls(true)
-
             minZoomLevel = 3.0
             maxZoomLevel = 19.0
-
             controller.setZoom(15.0)
         }
 
-        // ---------- TRACKING POLYLINE ----------
         trackingPolyline = Polyline(mapView).apply {
-
-            outlinePaint.color =
-                ContextCompat.getColor(ctx, R.color.tracking_line)
-
+            outlinePaint.color = ContextCompat.getColor(ctx, R.color.tracking_line)
             outlinePaint.strokeWidth = 8f
             outlinePaint.strokeCap = Paint.Cap.ROUND
             outlinePaint.strokeJoin = Paint.Join.ROUND
         }
-
         mapView.overlays.add(trackingPolyline)
 
-        // ---------- SEGMENT POLYLINE ----------
         segmentPolyline = Polyline(mapView).apply {
-
-            outlinePaint.color =
-                ContextCompat.getColor(ctx, R.color.segment_line)
-
+            outlinePaint.color = ContextCompat.getColor(ctx, R.color.segment_line)
             outlinePaint.strokeWidth = 12f
             outlinePaint.strokeCap = Paint.Cap.ROUND
             outlinePaint.strokeJoin = Paint.Join.ROUND
-
-            outlinePaint.pathEffect =
-                DashPathEffect(floatArrayOf(20f, 10f), 0f)
+            outlinePaint.pathEffect = DashPathEffect(floatArrayOf(20f, 10f), 0f)
         }
-
         mapView.overlays.add(segmentPolyline)
 
-        // ---------- START MARKER ----------
         startMarker = Marker(mapView).apply {
-
             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-
-            icon = ContextCompat.getDrawable(
-                ctx,
-                R.drawable.ic_marker_start
-            )
-
+            icon = ContextCompat.getDrawable(ctx, R.drawable.ic_marker_start)
             isDraggable = true
         }
 
-        // ---------- END MARKER ----------
         endMarker = Marker(mapView).apply {
-
             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-
-            icon = ContextCompat.getDrawable(
-                ctx,
-                R.drawable.ic_marker_end
-            )
-
+            icon = ContextCompat.getDrawable(ctx, R.drawable.ic_marker_end)
             isDraggable = true
         }
     }
-
 
     private fun setupUI() {
         updateUIState(viewModel.uiState.value)
     }
 
     private fun setupObservers() {
-        // Collect UI State – hanya saat view dalam state STARTED
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiState.collect { state ->
@@ -253,49 +193,82 @@ class MapSurveyFragment : Fragment() {
             }
         }
 
-        // Collect Tracking Points
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.trackingPoints.collect { points ->
-                    if (_binding != null) {
-                        updateTrackingPolyline(points)
-                    }
+                    if (_binding != null) updateTrackingPolyline(points)
                 }
             }
         }
 
-        // Collect Segment Creation Points
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.segmentCreationPoints.collect { points ->
-                    if (_binding != null) {
-                        updateSegmentPolyline(points)
-                    }
+                    if (_binding != null) updateSegmentPolyline(points)
                 }
             }
         }
 
-        // Collect Saved Segments
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.segments.collect { segments ->
-                    if (_binding != null) {
-                        displaySavedSegments(segments)
-                    }
+                    if (_binding != null) displaySavedSegments(segments)
                 }
             }
         }
 
-        // Collect Device Ready State
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.deviceReadyState.collect { state ->
-                    if (_binding != null) {
-                        updateDeviceReadyState(state)
-                    }
+                    if (_binding != null) updateDeviceReadyState(state)
                 }
             }
         }
+    }
+
+    private fun updateZAxisValidation(state: MapViewModel.MapUiState) {
+        if (_binding == null) return
+
+        val validation = state.zAxisValidation
+        if (validation == null) {
+            binding.tvZAxisStatus.text = getString(R.string.vibration_default)
+            binding.btnAddSurvey.isEnabled = false
+            return
+        }
+
+        val (colorRes, statusText, isAddEnabled) = when (validation) {
+            is ZAxisValidation.ValidMoving ->
+                Triple(R.color.good_green, validation.message, true)
+            is ZAxisValidation.WarningStopped ->
+                Triple(R.color.fair_yellow, validation.message, false)
+            is ZAxisValidation.InvalidShake ->
+                Triple(R.color.heavy_damage_red, validation.message, false)
+            is ZAxisValidation.InvalidNoMovement ->
+                Triple(R.color.heavy_damage_red, validation.message, false)
+            is ZAxisValidation.SuspiciousPattern ->
+                Triple(R.color.fair_yellow, validation.message, false)
+            else ->
+                Triple(R.color.gray_300, getString(R.string.vibration_default), false)
+        }
+
+        binding.tvZAxisStatus.apply {
+            text = statusText
+            val drawable = compoundDrawablesRelative[0]
+            drawable?.mutate()?.setTint(ContextCompat.getColor(requireContext(), colorRes))
+            setCompoundDrawablesRelative(drawable, null, null, null)
+        }
+
+        binding.tvZAxisMessage.apply {
+            if (validation is ZAxisValidation.ValidMoving) {
+                val confidencePercent = (validation.confidence * 100).toInt()
+                text = getString(R.string.confidence_level, "$confidencePercent%")
+                visibility = View.VISIBLE
+            } else {
+                visibility = View.GONE
+            }
+        }
+
+        binding.btnAddSurvey.isEnabled = isAddEnabled
     }
 
     private fun updateDeviceReadyState(state: MapViewModel.DeviceReadyState) {
@@ -303,61 +276,27 @@ class MapSurveyFragment : Fragment() {
         when (state) {
             MapViewModel.DeviceReadyState.READY -> {
                 binding.btnStartStop.isEnabled = true
-                binding.tvStatus.text = "READY - Sensor sebagai sumber jarak"
+                binding.tvStatus.text = getString(R.string.status_ready_sensor)
                 binding.tvStatus.setBackgroundColor(
                     ContextCompat.getColor(requireContext(), R.color.status_ready)
                 )
             }
             MapViewModel.DeviceReadyState.NOT_CONNECTED -> {
                 binding.btnStartStop.isEnabled = false
-                binding.tvStatus.text = "ESP32 not connected"
+                binding.tvStatus.text = getString(R.string.esp32_disconnected)
                 if (isAdded) {
-                    Snackbar.make(binding.root, "Connect ESP32 to start survey", Snackbar.LENGTH_LONG).show()
+                    Snackbar.make(binding.root, getString(R.string.connect_esp32), Snackbar.LENGTH_LONG).show()
                 }
             }
             MapViewModel.DeviceReadyState.CALIBRATION_NEEDED -> {
                 binding.btnStartStop.isEnabled = false
-                binding.tvStatus.text = "Calibration needed"
+                binding.tvStatus.text = getString(R.string.calibration_needed)
                 if (isAdded) {
-                    Snackbar.make(binding.root, "Input wheel diameter before survey", Snackbar.LENGTH_LONG).show()
+                    Snackbar.make(binding.root, getString(R.string.input_wheel_diameter), Snackbar.LENGTH_LONG).show()
                 }
             }
             else -> {
                 binding.btnStartStop.isEnabled = false
-            }
-        }
-    }
-
-    private fun updateZAxisValidation(state: MapViewModel.MapUiState) {
-        if (_binding == null) return
-        val zAxisState = when {
-            state.currentSpeed > 5f && kotlin.math.abs(state.currentVibration) < 2.0f -> ZAxisState.VALID_MOVING
-            state.currentSpeed < 1f -> ZAxisState.WARNING_STOPPED
-            kotlin.math.abs(state.currentVibration) > 5.0f -> ZAxisState.INVALID_SHAKE
-            else -> ZAxisState.VALID_MOVING
-        }
-
-        when (zAxisState) {
-            ZAxisState.VALID_MOVING -> {
-                binding.zAxisIndicator.setBackgroundColor(
-                    ContextCompat.getColor(requireContext(), R.color.good_green)
-                )
-                binding.tvZAxisStatus.text = "✅ Valid - Siap merekam"
-                binding.btnAddSurvey.isEnabled = true
-            }
-            ZAxisState.WARNING_STOPPED -> {
-                binding.zAxisIndicator.setBackgroundColor(
-                    ContextCompat.getColor(requireContext(), R.color.fair_yellow)
-                )
-                binding.tvZAxisStatus.text = "⚠️ Kendaraan berhenti"
-                binding.btnAddSurvey.isEnabled = false
-            }
-            ZAxisState.INVALID_SHAKE -> {
-                binding.zAxisIndicator.setBackgroundColor(
-                    ContextCompat.getColor(requireContext(), R.color.heavy_damage_red)
-                )
-                binding.tvZAxisStatus.text = "❌ Getaran ekstrem"
-                binding.btnAddSurvey.isEnabled = false
             }
         }
     }
@@ -387,14 +326,15 @@ class MapSurveyFragment : Fragment() {
             centerMapOnCurrentLocation()
         }
 
-        // Overlay untuk tap pada saat pembuatan segment
         if (mapTapOverlay == null) {
             mapTapOverlay = object : Overlay() {
                 override fun onSingleTapConfirmed(e: MotionEvent?, mapView: MapView?): Boolean {
                     if (viewModel.uiState.value.isCreatingSegment) {
                         val projection = mapView?.projection
-                        val geoPoint = projection?.fromPixels(e?.x?.toInt() ?: 0, e?.y?.toInt() ?: 0)
-                            ?.let { GeoPoint(it) }
+                        val geoPoint = projection?.fromPixels(
+                            e?.x?.toInt() ?: 0,
+                            e?.y?.toInt() ?: 0
+                        )?.let { GeoPoint(it) }
                         geoPoint?.let { point ->
                             handleMapTapForSegment(point)
                         }
@@ -409,8 +349,13 @@ class MapSurveyFragment : Fragment() {
 
     private fun updateUIState(state: MapViewModel.MapUiState) {
         if (_binding == null) return
+
         binding.tvRecordingStatus.visibility = if (state.isTracking && !state.isPaused) View.VISIBLE else View.GONE
-        binding.tvRecordingStatus.text = if (state.isPaused) "PAUSED" else "RECORDING"
+        binding.tvRecordingStatus.text = if (state.isPaused) {
+            getString(R.string.status_paused_ui)
+        } else {
+            getString(R.string.status_recording)
+        }
         binding.tvRecordingStatus.setBackgroundColor(
             ContextCompat.getColor(
                 requireContext(),
@@ -428,7 +373,6 @@ class MapSurveyFragment : Fragment() {
         val isReady = viewModel.deviceReadyState.value == MapViewModel.DeviceReadyState.READY
 
         if (state.isTracking) {
-            // Tombol START → STOP
             binding.btnStartStop.text = getString(R.string.btn_stop)
             binding.btnStartStop.icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_stop)
             binding.btnStartStop.backgroundTintList = ContextCompat.getColorStateList(
@@ -437,7 +381,6 @@ class MapSurveyFragment : Fragment() {
             )
             binding.btnStartStop.iconTint = ContextCompat.getColorStateList(requireContext(), R.color.white)
 
-            // Tombol PAUSE / RESUME
             binding.btnPauseResume.isEnabled = true
             if (state.isPaused) {
                 binding.btnPauseResume.text = getString(R.string.btn_resume)
@@ -448,10 +391,8 @@ class MapSurveyFragment : Fragment() {
             }
             binding.btnPauseResume.iconTint = ContextCompat.getColorStateList(requireContext(), R.color.white)
 
-            // Tombol Add Survey aktif
             binding.btnAddSurvey.isEnabled = true
         } else {
-            // Tombol STOP → START
             binding.btnStartStop.text = getString(R.string.btn_start)
             binding.btnStartStop.icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_play_arrow)
             binding.btnStartStop.backgroundTintList = ContextCompat.getColorStateList(
@@ -461,56 +402,49 @@ class MapSurveyFragment : Fragment() {
             binding.btnStartStop.iconTint = ContextCompat.getColorStateList(requireContext(), R.color.white)
             binding.btnStartStop.isEnabled = isReady
 
-            // Tombol PAUSE tidak aktif
             binding.btnPauseResume.isEnabled = false
             binding.btnPauseResume.text = getString(R.string.btn_pause)
             binding.btnPauseResume.icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_pause)
             binding.btnPauseResume.iconTint = ContextCompat.getColorStateList(requireContext(), R.color.white)
 
-            // Tombol Add Survey nonaktif
             binding.btnAddSurvey.isEnabled = false
         }
     }
 
     private fun updateDataDisplays(state: MapViewModel.MapUiState) {
         if (_binding == null) return
-        binding.tvSpeed.text = String.format(
-            Locale.getDefault(),
-            "%.1f km/h",
-            state.currentSpeed
-        )
-        binding.tvDistance.text = String.format(
-            Locale.getDefault(),
-            "%.2f km",
-            state.tripDistance / 1000
-        )
-        binding.tvVibration.text = String.format(
-            Locale.getDefault(),
-            "Z: %.2fg",
-            kotlin.math.abs(state.currentVibration)
-        )
-        binding.tvConnectionStatus.text = if (state.esp32Connected)
-            "ESP32: ✅ Connected" else "ESP32: ❌ Disconnected"
+        binding.tvSpeed.text = getString(R.string.speed_format, state.currentSpeed)
+        binding.tvDistance.text = getString(R.string.distance_format, state.tripDistance / 1000)
+        binding.tvVibration.text = getString(R.string.vibration_format, kotlin.math.abs(state.currentVibration))
+        binding.tvConnectionStatus.text = if (state.esp32Connected) {
+            getString(R.string.esp32_connected)
+        } else {
+            getString(R.string.esp32_disconnected)
+        }
         binding.tvConnectionStatus.setTextColor(
             ContextCompat.getColor(
                 requireContext(),
                 if (state.esp32Connected) R.color.connected_green else R.color.disconnected_red
             )
         )
-        binding.tvPacketInfo.text = "Packets: ${state.packetCount} | Errors: ${state.errorCount}"
+        binding.tvPacketInfo.text = getString(
+            R.string.packet_info_format,
+            state.packetCount,
+            state.errorCount
+        )
     }
 
     private fun updateGpsStatus(state: MapViewModel.MapUiState) {
         if (_binding == null) return
         when (state.gpsSignalStrength) {
             MapViewModel.SignalStrength.NONE -> {
-                binding.tvGpsStatus.text = "📍 GPS: Unavailable (Using Sensor)"
+                binding.tvGpsStatus.text = getString(R.string.gps_unavailable)
                 binding.tvGpsStatus.setTextColor(
                     ContextCompat.getColor(requireContext(), R.color.gps_none)
                 )
             }
             else -> {
-                binding.tvGpsStatus.text = "📍 GPS: ${state.gpsAccuracy}"
+                binding.tvGpsStatus.text = getString(R.string.gps_accuracy, state.gpsAccuracy)
                 binding.tvGpsStatus.setTextColor(
                     ContextCompat.getColor(requireContext(), R.color.gps_good)
                 )
@@ -528,12 +462,12 @@ class MapSurveyFragment : Fragment() {
                     position = geoPoint
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                     icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_my_location)
-                    title = "Position Reference\nAccuracy: ${location.accuracy}m"
+                    title = getString(R.string.position_reference, location.accuracy)
                     mapView.overlays.add(this)
                 }
             } else {
                 currentLocationMarker?.position = geoPoint
-                currentLocationMarker?.title = "Position Reference\nAccuracy: ${location.accuracy}m"
+                currentLocationMarker?.title = getString(R.string.position_reference, location.accuracy)
             }
         }
     }
@@ -541,7 +475,7 @@ class MapSurveyFragment : Fragment() {
     private fun updateTrackingPolyline(points: List<GeoPoint>) {
         if (_binding == null) return
         trackingPolyline.setPoints(points)
-        mapView.invalidate()
+        mapView.postInvalidate()
     }
 
     private fun updateSegmentPolyline(points: List<GeoPoint>) {
@@ -551,7 +485,7 @@ class MapSurveyFragment : Fragment() {
         when (points.size) {
             1 -> {
                 startMarker.position = points[0]
-                startMarker.title = "Segment Start"
+                startMarker.title = getString(R.string.segment_start)
                 if (!mapView.overlays.contains(startMarker)) {
                     mapView.overlays.add(startMarker)
                 }
@@ -559,8 +493,8 @@ class MapSurveyFragment : Fragment() {
             2 -> {
                 startMarker.position = points[0]
                 endMarker.position = points[1]
-                startMarker.title = "Segment Start"
-                endMarker.title = "Segment End"
+                startMarker.title = getString(R.string.segment_start)
+                endMarker.title = getString(R.string.segment_end)
 
                 if (!mapView.overlays.contains(startMarker)) {
                     mapView.overlays.add(startMarker)
@@ -569,12 +503,10 @@ class MapSurveyFragment : Fragment() {
                     mapView.overlays.add(endMarker)
                 }
 
-                // Hapus marker jarak sebelumnya
                 mapView.overlays.removeAll { overlay ->
-                    overlay is Marker && overlay.title?.startsWith("Distance") == true
+                    overlay is Marker && overlay.title?.startsWith(getString(R.string.distance_prefix)) == true
                 }
 
-                // Marker jarak tanpa icon (hanya teks)
                 val sensorDistance = viewModel.uiState.value.tripDistance
                 val midpoint = GeoPoint(
                     (points[0].latitude + points[1].latitude) / 2,
@@ -584,7 +516,7 @@ class MapSurveyFragment : Fragment() {
                     position = midpoint
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                     icon = null
-                    title = "Distance (Sensor): ${String.format("%.1f", sensorDistance)}m"
+                    title = getString(R.string.distance_sensor, sensorDistance)
                 }
                 mapView.overlays.add(distanceMarker)
             }
@@ -592,11 +524,6 @@ class MapSurveyFragment : Fragment() {
         mapView.invalidate()
     }
 
-    /**
-     * Menampilkan segmen yang sudah disimpan di peta.
-     * - Warna polyline berdasarkan kondisi jalan.
-     * - SubDescription menampilkan jenis permukaan + sumber data.
-     */
     private fun displaySavedSegments(segments: List<zaujaani.roadsense.data.local.RoadSegment>) {
         if (_binding == null) return
         val toRemove = mapView.overlays.filter { overlay ->
@@ -612,7 +539,6 @@ class MapSurveyFragment : Fragment() {
                         GeoPoint(segment.endLatitude, segment.endLongitude)
                     )
                 )
-                // Warna berdasarkan kondisi jalan
                 val color = when (segment.condition) {
                     RoadCondition.GOOD.code -> ContextCompat.getColor(requireContext(), R.color.condition_good)
                     RoadCondition.MODERATE.code -> ContextCompat.getColor(requireContext(), R.color.condition_moderate)
@@ -622,17 +548,16 @@ class MapSurveyFragment : Fragment() {
                 outlinePaint.color = color
                 outlinePaint.strokeWidth = 8f
 
-                // Nama permukaan dari kode
                 val surfaceName = when (segment.surface) {
-                    SurfaceType.ASPHALT.code -> "Aspal"
-                    SurfaceType.CONCRETE.code -> "Beton"
-                    SurfaceType.GRAVEL.code -> "Kerikil"
-                    SurfaceType.DIRT.code -> "Tanah"
-                    else -> "Lainnya"
+                    SurfaceType.ASPHALT.code -> getString(R.string.asphalt)
+                    SurfaceType.CONCRETE.code -> getString(R.string.concrete)
+                    SurfaceType.GRAVEL.code -> getString(R.string.gravel)
+                    SurfaceType.DIRT.code -> getString(R.string.dirt)
+                    else -> getString(R.string.other)
                 }
 
-                title = "${segment.roadName} - ${segment.distanceMeters}m"
-                subDescription = "$surfaceName • ${segment.dataSource}" // ✅ Surface tampil di sini
+                title = getString(R.string.segment_title, segment.roadName, segment.distanceMeters)
+                subDescription = getString(R.string.segment_subdesc, surfaceName, segment.dataSource)
             }
             mapView.overlays.add(segmentPolyline)
         }
@@ -658,7 +583,7 @@ class MapSurveyFragment : Fragment() {
             when (result) {
                 is MapViewModel.SurveyStartResult.SUCCESS -> {
                     if (_binding != null) {
-                        Snackbar.make(binding.root, "Survey started - Sensor as primary source", Snackbar.LENGTH_SHORT).show()
+                        Snackbar.make(binding.root, getString(R.string.survey_started), Snackbar.LENGTH_SHORT).show()
                     }
                 }
                 is MapViewModel.SurveyStartResult.ERROR -> {
@@ -676,16 +601,16 @@ class MapSurveyFragment : Fragment() {
             if (_binding != null) {
                 Snackbar.make(
                     binding.root,
-                    "Tap on map to set segment points (GPS optional)",
+                    getString(R.string.msg_start_segment),
                     Snackbar.LENGTH_LONG
                 ).show()
             }
         } else {
             if (isAdded && _binding != null) {
                 MaterialAlertDialogBuilder(requireContext())
-                    .setTitle("Cannot Create Segment")
-                    .setMessage("Survey must be active to create segments")
-                    .setPositiveButton("OK", null)
+                    .setTitle(getString(R.string.cannot_create_segment))
+                    .setMessage(getString(R.string.survey_required_for_segment))
+                    .setPositiveButton(getString(R.string.ok), null)
                     .show()
             }
         }
@@ -699,7 +624,7 @@ class MapSurveyFragment : Fragment() {
             if (_binding != null) {
                 Snackbar.make(
                     binding.root,
-                    "Start point set (GPS position reference)",
+                    getString(R.string.msg_segment_start_set),
                     Snackbar.LENGTH_SHORT
                 ).show()
             }
@@ -715,9 +640,9 @@ class MapSurveyFragment : Fragment() {
             } else {
                 if (isAdded && _binding != null) {
                     MaterialAlertDialogBuilder(requireContext())
-                        .setTitle("Z-Axis Validation Failed")
+                        .setTitle(getString(R.string.z_axis_validation_failed))
                         .setMessage(validationResult.messages.joinToString("\n"))
-                        .setPositiveButton("OK") { _, _ ->
+                        .setPositiveButton(getString(R.string.ok)) { _, _ ->
                             viewModel.cancelSegmentCreation()
                         }
                         .show()
@@ -742,11 +667,11 @@ class MapSurveyFragment : Fragment() {
             val geoPoint = GeoPoint(it.latitude, it.longitude)
             mapView.controller.animateTo(geoPoint, 16.0, 1000L)
             if (_binding != null) {
-                Snackbar.make(binding.root, R.string.map_center_current, Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, getString(R.string.map_center_current), Snackbar.LENGTH_SHORT).show()
             }
         } ?: run {
             if (_binding != null) {
-                Snackbar.make(binding.root, "No GPS reference available", Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, getString(R.string.gps_unavailable_short), Snackbar.LENGTH_SHORT).show()
             }
         }
     }
@@ -754,17 +679,17 @@ class MapSurveyFragment : Fragment() {
     private fun showStopConfirmationDialog() {
         if (isAdded && _binding != null) {
             MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Stop Survey")
-                .setMessage("Stop survey and save data?")
-                .setPositiveButton("Stop & Save") { _, _ ->
+                .setTitle(getString(R.string.stop_survey_title))
+                .setMessage(getString(R.string.stop_survey_message))
+                .setPositiveButton(getString(R.string.stop_and_save)) { _, _ ->
                     lifecycleScope.launch {
                         viewModel.stopSurvey()
                         if (_binding != null) {
-                            Snackbar.make(binding.root, "Survey stopped - Data saved", Snackbar.LENGTH_SHORT).show()
+                            Snackbar.make(binding.root, getString(R.string.survey_stopped), Snackbar.LENGTH_SHORT).show()
                         }
                     }
                 }
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(getString(R.string.cancel), null)
                 .show()
         }
     }
@@ -783,11 +708,5 @@ class MapSurveyFragment : Fragment() {
         super.onDestroyView()
         mapView.onDetach()
         _binding = null
-    }
-
-    enum class ZAxisState {
-        VALID_MOVING,
-        WARNING_STOPPED,
-        INVALID_SHAKE
     }
 }

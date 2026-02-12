@@ -21,7 +21,8 @@ class RealtimeRoadsenseBus @Inject constructor() {
     private val _surveyState = MutableStateFlow<SurveyEngine.SurveyState>(SurveyEngine.SurveyState.Idle)
     val surveyState: StateFlow<SurveyEngine.SurveyState> = _surveyState.asStateFlow()
 
-    fun publishSensorData(data: ESP32SensorData) {
+    // ✅ FIX: parameter jadi nullable, agar bisa menerima null saat disconnect
+    fun publishSensorData(data: ESP32SensorData?) {
         _sensorData.value = data
     }
 

@@ -166,10 +166,10 @@
     <string name="map_zoom_out">Perkecil</string>
 
     <!-- ===== SURVEY SEGMENT ===== -->
-    <string name="msg_start_segment">Tap pada peta untuk titik awal dan akhir segmen</string>
+
     <string name="msg_no_esp32">Tidak bisa membuat segmen. Pastikan ESP32 terhubung dan GPS aktif</string>
     <string name="msg_segment_cancelled">Pembuatan segmen dibatalkan</string>
-    <string name="msg_segment_start_set">Titik awal ditetapkan</string>
+
     <string name="msg_segment_ready">Segmen siap. Keyakinan: %s</string>
     <string name="segment_creation_started">Pembuatan segmen dimulai</string>
     <string name="segment_creation_complete">Tap titik akhir pada peta</string>
@@ -270,12 +270,12 @@
     <string name="error_no_active_survey">Tidak ada survey aktif</string>
 
     <!-- ===== COMMON BUTTONS ===== -->
-    <string name="cancel">Batal</string>
+
     <string name="save">Simpan</string>
     <string name="confirm">Konfirmasi</string>
     <string name="yes">Ya</string>
     <string name="no">Tidak</string>
-    <string name="ok">OK</string>
+
     <string name="retry">Coba Lagi</string>
     <string name="action_edit">Edit</string>
     <string name="action_delete">Hapus</string>
@@ -300,6 +300,50 @@
     <string name="btn_stop">STOP</string>
     <string name="btn_pause">PAUSE</string>
     <string name="btn_resume">RESUME</string>
+    <string name="fusion_inactive">Fusion: Inactive</string>
+    <string name="fusion_active">Fusion: Active</string>
+    <string name="battery_label">🔋 %.1fV</string>
+    <string name="temperature_label">🌡️ %.1f°C</string>
+    <string name="reconnecting">Reconnecting…</string>
+    <string name="validation_confidence">Confidence: %s</string>
+    <string name="packet_info_default">Packets: 0 | Errors: 0</string>
+    <string name="battery_default">🔋 -- V</string>
+    <string name="temperature_default">🌡️ -- °C</string>
+    <string name="speed_default">0.0 km/h</string>
+    <string name="distance_default">0.00 km</string>
+    <string name="gps_ready">GPS ready for position reference</string>
+    <string name="survey_without_gps">⚠️ Survey tetap bisa berjalan tanpa GPS (menggunakan sensor)</string>
+    <string name="status_ready_sensor">READY - Sensor sebagai sumber jarak</string>
+    <string name="connect_esp32">Connect ESP32 to start survey</string>
+    <string name="calibration_needed">Calibration needed</string>
+    <string name="input_wheel_diameter">Input wheel diameter before survey</string>
+    <string name="speed_format">%.1f km/h</string>
+    <string name="distance_format">%.2f km</string>
+    <string name="vibration_format">Z: %.2fg</string>
+    <string name="esp32_connected">ESP32: ✅ Connected</string>
+    <string name="packet_info_format">Packets: %d | Errors: %d</string>
+    <string name="gps_accuracy">📍 GPS: %s</string>
+    <string name="position_reference">Position Reference\nAccuracy: %.1fm</string>
+    <string name="segment_start">Segment Start</string>
+    <string name="segment_end">Segment End</string>
+    <string name="survey_required_for_segment">Survey must be active to create segments</string>
+    <string name="distance_prefix">Distance</string>
+    <string name="distance_sensor">Distance (Sensor): %.1fm</string>
+    <string name="segment_title">%s - %.1fm</string>
+    <string name="segment_subdesc">%s • %s</string>
+    <string name="stop_survey_title">Stop Survey</string>
+    <string name="stop_survey_message">Stop survey and save data?</string>
+    <string name="stop_and_save">Stop &amp; Save</string>
+    <string name="survey_stopped">Survey stopped - Data saved</string>
+    <string name="gps_unavailable_short">No GPS reference available</string>
+    <string name="cannot_create_segment">Cannot Create Segment</string>
+    <string name="z_axis_validation_failed">Z-Axis Validation Failed</string>
+    <string name="ok">OK</string>
+    <string name="cancel">Batal</string>
+    <string name="survey_started">Survey started - Sensor as primary source</string>
+    <string name="msg_start_segment">Tap on map to set segment points (GPS optional)</string>
+    <string name="msg_segment_start_set">Start point set (GPS position reference)</string>
+
 
 
 

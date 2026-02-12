@@ -18,7 +18,8 @@ import javax.inject.Singleton
 @Singleton
 class GPSGateway @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val bus: RealtimeRoadsenseBus
+    private val bus: RealtimeRoadsenseBus,
+    private val gpsFusionEngine: GPSFusionEngine      // ✅ Integrasi GPS Fusion Engine
 ) : LocationListener {
 
     private val locationManager: LocationManager? =
@@ -64,6 +65,11 @@ class GPSGateway @Inject constructor(
                 _currentLocation.value = it
                 bus.publishGpsLocation(it)
                 _gpsStatus.value = GPSStatus.Available(it.accuracy)
+
+                // ✅ Update fusion engine dengan GPS fix terakhir (jika bagus)
+                if (gpsFusionEngine.isGoodGPSFix(it)) {
+                    gpsFusionEngine.updateGoodGPSFix(it)
+                }
             }
             Timber.d("🛰️ GPS tracking started")
         } catch (e: SecurityException) {
@@ -88,10 +94,17 @@ class GPSGateway @Inject constructor(
         _currentLocation.value = location
         _gpsStatus.value = GPSStatus.Available(location.accuracy)
         bus.publishGpsLocation(location)
+
+        // ✅ Update fusion engine jika GPS fix bagus
+        if (gpsFusionEngine.isGoodGPSFix(location)) {
+            gpsFusionEngine.updateGoodGPSFix(location)
+        }
+
         Timber.v("📍 GPS: acc=${location.accuracy}m")
     }
 
     override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) = Unit
+
     override fun onProviderEnabled(provider: String) {
         _gpsStatus.value = GPSStatus.Searching
     }
@@ -100,6 +113,34 @@ class GPSGateway @Inject constructor(
         _gpsStatus.value = GPSStatus.Disabled
         bus.publishGpsLocation(null)
     }
+
+    /**
+     * Mendapatkan lokasi terbaik (GPS real atau interpolasi)
+     *
+     * @param sensorDistance Jarak tempuh dari sensor (dalam meter)
+     * @param bearing Arah kendaraan (opsional, bisa dari kompas atau sensor)
+     * @return LocationResult yang berisi lokasi beserta statusnya
+     */
+    fun getFusedLocation(
+        sensorDistance: Float,
+        bearing: Float? = null
+    ): LocationResult {
+        val gpsLocation = _currentLocation.value
+        return gpsFusionEngine.getOrInterpolateLocation(sensorDistance, gpsLocation, bearing)
+    }
+
+    /**
+     * Mereset engine fusion – panggil saat memulai survey baru
+     */
+    fun resetFusion() {
+        gpsFusionEngine.reset()
+        Timber.d("GPS Fusion Engine reset")
+    }
+
+    /**
+     * Mendapatkan status terkini dari fusion engine
+     */
+    fun getFusionState(): GPSFusionEngine.FusionState = gpsFusionEngine.getFusionState()
 
     fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Float {
         val results = FloatArray(1)

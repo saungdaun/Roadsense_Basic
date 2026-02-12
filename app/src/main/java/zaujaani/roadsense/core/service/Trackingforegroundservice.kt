@@ -27,7 +27,7 @@ import javax.inject.Inject
 /**
  * Tracking Foreground Service – The Heart of RoadSense
  *
- * 🔁 Auto-reconnect ESP32 dengan exponential backoff (StateFlow sudah distinct)
+ * 🔁 Auto‑reconnect ESP32 **sepenuhnya dikelola oleh BluetoothGateway**
  * 📡 Pipeline data trigger dari sensor, ambil GPS terakhir via StateFlow.value
  * 💾 Semua data disimpan dengan quality flags & sessionId nullable (cegah corrupt)
  * 🔔 Notifikasi persist dengan time‑based throttle (3 detik)
@@ -55,7 +55,6 @@ class TrackingForegroundService : Service() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var dataProcessingJob: Job? = null
-    private var reconnectionJob: Job? = null
 
     // 🔐 Nullable session ID – mencegah penyimpanan ke database jika tidak valid
     private var currentSessionId: Long? = null
@@ -77,10 +76,6 @@ class TrackingForegroundService : Service() {
         private const val CHANNEL_ID = "roadsense_tracking"
         private const val CHANNEL_NAME = "RoadSense Tracking"
 
-        // Reconnection parameters
-        private const val RECONNECT_MAX_ATTEMPTS = 5
-        private const val RECONNECT_BASE_DELAY = 1000L // 1 second
-
         // Actions
         const val ACTION_START_SURVEY = "ACTION_START_SURVEY"
         const val ACTION_STOP_SURVEY = "ACTION_STOP_SURVEY"
@@ -100,7 +95,7 @@ class TrackingForegroundService : Service() {
 
         gpsGateway.startTracking()
         startDataProcessing()
-        startReconnectionListener()
+        observeConnectionState() // ✅ hanya untuk logging/UI, tidak memicu reconnect
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -130,10 +125,10 @@ class TrackingForegroundService : Service() {
         Timber.d("🛑 TrackingForegroundService destroyed")
 
         dataProcessingJob?.cancel()
-        reconnectionJob?.cancel()
 
-        // 🟢 Cooperative cancellation: disconnect di scope yang sama (tidak blocking main thread)
-        serviceScope.launch {
+        // 🔌 Putuskan koneksi Bluetooth dengan runBlocking(Dispatchers.IO)
+        // karena disconnect() sekarang suspend dan operasi I/O cepat.
+        runBlocking(Dispatchers.IO) {
             bluetoothGateway.disconnect()
         }
 
@@ -142,34 +137,36 @@ class TrackingForegroundService : Service() {
     }
 
     // -------------------------------------------------------------------------
-    //  🔁 RECONNECTION LOGIC (EXPONENTIAL BACKOFF)
+    //  🔍 OBSERVE CONNECTION STATE (HANYA UNTUK LOGGING / NOTIFIKASI)
     // -------------------------------------------------------------------------
 
-    private fun startReconnectionListener() {
-        reconnectionJob = serviceScope.launch {
+    private fun observeConnectionState() {
+        serviceScope.launch {
             bluetoothGateway.connectionState.collectLatest { state ->
-                if (state is BluetoothGateway.ConnectionState.Disconnected) {
-                    Timber.w("⚠️ ESP32 disconnected – memulai reconnect...")
-                    reconnectWithBackoff()
+                when (state) {
+                    is BluetoothGateway.ConnectionState.Connected -> {
+                        Timber.i("🔵 ESP32 connected")
+                        updateNotification("ESP32 connected")
+                    }
+                    is BluetoothGateway.ConnectionState.Connecting -> {
+                        Timber.d("🔵 Connecting to ESP32...")
+                        updateNotification("Connecting to ESP32...")
+                    }
+                    is BluetoothGateway.ConnectionState.Disconnected -> {
+                        Timber.w("🔴 ESP32 disconnected")
+                        updateNotification("ESP32 disconnected")
+                    }
+                    is BluetoothGateway.ConnectionState.Reconnecting -> {
+                        Timber.d("🔄 Reconnecting (${state.attempt}/${state.maxAttempts})")
+                        updateNotification("Reconnecting (${state.attempt}/${state.maxAttempts})...")
+                    }
+                    is BluetoothGateway.ConnectionState.Error -> {
+                        Timber.e("❌ Bluetooth error: ${state.message}")
+                        updateNotification("Error: ${state.message}")
+                    }
                 }
             }
         }
-    }
-
-    private suspend fun reconnectWithBackoff() {
-        repeat(RECONNECT_MAX_ATTEMPTS) { attempt ->
-            val delayMs = RECONNECT_BASE_DELAY * (1 shl attempt)
-            Timber.d("🔄 Reconnect attempt ${attempt + 1}/$RECONNECT_MAX_ATTEMPTS in ${delayMs}ms")
-            delay(delayMs)
-
-            if (bluetoothGateway.connect()) {
-                Timber.d("✅ ESP32 reconnected successfully")
-                updateNotification("ESP32 connected")
-                return
-            }
-        }
-        Timber.e("❌ Gagal reconnect setelah $RECONNECT_MAX_ATTEMPTS percobaan")
-        updateNotification("ESP32 connection failed")
     }
 
     // -------------------------------------------------------------------------
@@ -309,7 +306,6 @@ class TrackingForegroundService : Service() {
             else -> "LOW"
         }
     }
-
 
     // -------------------------------------------------------------------------
     //  🎮 SURVEY CONTROL

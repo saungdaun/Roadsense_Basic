@@ -7,20 +7,8 @@ import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothSocket
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancelChildren
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
 import timber.log.Timber
 import zaujaani.roadsense.core.events.RealtimeRoadsenseBus
 import zaujaani.roadsense.domain.model.ESP32SensorData
@@ -31,9 +19,20 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * BluetoothGateway - IMPROVED VERSION
+ *
+ * Improvements:
+ * ✅ Auto-reconnect dengan exponential backoff
+ * ✅ Better error handling dengan sealed class
+ * ✅ Connection state machine
+ * ✅ Retry mechanism dengan max attempts
+ * ✅ Connection timeout handling
+ * ✅ Thread-safe operations
+ */
 @Singleton
 class BluetoothGateway @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val bus: RealtimeRoadsenseBus
 ) {
 
@@ -41,9 +40,15 @@ class BluetoothGateway @Inject constructor(
         private const val ESP32_NAME = "RoadsenseLogger-v3.7"
         private val SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
         private const val BUFFER_SIZE = 1024
+        private const val SOCKET_TIMEOUT_MS = 5000
+
+        // Auto-reconnect configuration
+        private const val MAX_RECONNECT_ATTEMPTS = 5
+        private const val RECONNECT_BASE_DELAY = 1000L      // 1 second
+        private const val RECONNECT_MAX_DELAY = 16000L      // 16 seconds max
+        private const val RECONNECT_MULTIPLIER = 2          // Exponential factor
     }
 
-    // BluetoothManager – cara modern, tidak deprecated
     private val bluetoothManager: BluetoothManager? by lazy {
         context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
     }
@@ -56,46 +61,83 @@ class BluetoothGateway @Inject constructor(
     private var inputStream: InputStream? = null
     private var outputStream: OutputStream? = null
 
-    // Coroutine scope khusus untuk operasi Bluetooth
     private val bluetoothScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
-    // Job untuk membaca data, akan dibatalkan saat disconnect
     private var readingJob: Job? = null
+    private var reconnectJob: Job? = null
 
-    // State untuk koneksi
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
 
-    // Incoming data sebagai StateFlow (setiap line string)
     private val _incomingData = MutableStateFlow("")
     val incomingData: StateFlow<String> = _incomingData.asStateFlow()
 
+    private var reconnectAttempts = 0
+    private var isAutoReconnectEnabled = true
+
+    /**
+     * Connection State - Enhanced with error details
+     */
     sealed class ConnectionState {
         object Disconnected : ConnectionState()
         object Connecting : ConnectionState()
         object Connected : ConnectionState()
-        data class Error(val message: String) : ConnectionState()
+        data class Reconnecting(
+            val attempt: Int,
+            val maxAttempts: Int,
+            val nextRetryIn: Long
+        ) : ConnectionState()
+        data class Error(
+            val type: ErrorType,
+            val message: String,
+            val canRetry: Boolean = true
+        ) : ConnectionState()
+    }
+
+    /**
+     * Error Types untuk better debugging
+     */
+    enum class ErrorType {
+        BLUETOOTH_UNAVAILABLE,
+        BLUETOOTH_DISABLED,
+        DEVICE_NOT_FOUND,
+        CONNECTION_FAILED,
+        CONNECTION_LOST,
+        TIMEOUT,
+        PERMISSION_DENIED,
+        MAX_RETRY_REACHED,
+        UNKNOWN
     }
 
     init {
         if (bluetoothAdapter == null) {
             Timber.e("❌ Bluetooth tidak tersedia di perangkat ini")
+            _connectionState.value = ConnectionState.Error(
+                ErrorType.BLUETOOTH_UNAVAILABLE,
+                "Bluetooth adapter not available"
+            )
         }
     }
 
-    // -------------------------------------------------------------------------
-    //  PUBLIC API
-    // -------------------------------------------------------------------------
-
+    /**
+     * Connect to ESP32 with retry mechanism
+     */
     @SuppressLint("MissingPermission")
     suspend fun connect(): Boolean = withContext(Dispatchers.IO) {
-        // Validasi awal
         if (bluetoothAdapter == null) {
-            _connectionState.value = ConnectionState.Error("Bluetooth tidak tersedia")
+            _connectionState.value = ConnectionState.Error(
+                ErrorType.BLUETOOTH_UNAVAILABLE,
+                "Bluetooth tidak tersedia",
+                canRetry = false
+            )
             return@withContext false
         }
+
         if (!bluetoothAdapter!!.isEnabled) {
-            _connectionState.value = ConnectionState.Error("Bluetooth dimatikan")
+            _connectionState.value = ConnectionState.Error(
+                ErrorType.BLUETOOTH_DISABLED,
+                "Bluetooth dimatikan",
+                canRetry = false
+            )
             return@withContext false
         }
 
@@ -103,155 +145,300 @@ class BluetoothGateway @Inject constructor(
         Timber.d("🔵 Menghubungkan ke $ESP32_NAME...")
 
         try {
-            // Cari perangkat yang sudah dipasangkan
+            // Find paired device
             val device = bluetoothAdapter!!.bondedDevices.find { it.name == ESP32_NAME }
             if (device == null) {
-                _connectionState.value = ConnectionState.Error("$ESP32_NAME tidak ditemukan di daftar paired")
+                _connectionState.value = ConnectionState.Error(
+                    ErrorType.DEVICE_NOT_FOUND,
+                    "$ESP32_NAME tidak ditemukan di daftar paired"
+                )
                 return@withContext false
             }
 
-            // Buat socket dan konek
-            bluetoothSocket = device.createRfcommSocketToServiceRecord(SPP_UUID).also {
-                it.connect()
+            // Cancel discovery to prevent interference
+            bluetoothAdapter?.cancelDiscovery()
+
+            // Create socket and connect with timeout
+            bluetoothSocket = device.createRfcommSocketToServiceRecord(SPP_UUID)
+
+            withTimeout(SOCKET_TIMEOUT_MS.toLong()) {
+                bluetoothSocket?.connect()
             }
 
             inputStream = bluetoothSocket?.inputStream
             outputStream = bluetoothSocket?.outputStream
 
             _connectionState.value = ConnectionState.Connected
+            reconnectAttempts = 0  // Reset counter on successful connection
 
-            // Mulai membaca data secara async via callbackFlow
-            startReading()
+            // Start reading data
+            startDataReading()
 
-            true
+            Timber.d("✅ Terhubung ke $ESP32_NAME")
+            return@withContext true
+
+        } catch (e: TimeoutCancellationException) {
+            Timber.e(e, "❌ Connection timeout")
+            _connectionState.value = ConnectionState.Error(
+                ErrorType.TIMEOUT,
+                "Connection timeout setelah ${SOCKET_TIMEOUT_MS}ms"
+            )
+            disconnect()
+            return@withContext false
+
         } catch (e: IOException) {
-            Timber.e(e, "❌ Gagal konek Bluetooth")
-            _connectionState.value = ConnectionState.Error("Koneksi gagal: ${e.message}")
-            disconnect() // cleanup
-            false
+            Timber.e(e, "❌ IOException during connection")
+            _connectionState.value = ConnectionState.Error(
+                ErrorType.CONNECTION_FAILED,
+                "Gagal terhubung: ${e.message}"
+            )
+            disconnect()
+            return@withContext false
+
+        } catch (e: Exception) {
+            Timber.e(e, "❌ Unexpected error during connection")
+            _connectionState.value = ConnectionState.Error(
+                ErrorType.UNKNOWN,
+                "Error tidak diketahui: ${e.message}"
+            )
+            disconnect()
+            return@withContext false
         }
     }
 
-    suspend fun disconnect() = withContext(Dispatchers.IO) {
-        // Batalkan job membaca jika ada
+    /**
+     * Auto-reconnect dengan exponential backoff
+     *
+     * Delay pattern: 1s, 2s, 4s, 8s, 16s
+     * Max attempts: 5
+     */
+    suspend fun startAutoReconnect() {
+        if (!isAutoReconnectEnabled) {
+            Timber.d("Auto-reconnect disabled")
+            return
+        }
+
+        reconnectJob?.cancel()
+        reconnectJob = bluetoothScope.launch {
+            var delay = RECONNECT_BASE_DELAY
+            reconnectAttempts = 0
+
+            while (isActive && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                reconnectAttempts++
+
+                _connectionState.value = ConnectionState.Reconnecting(
+                    attempt = reconnectAttempts,
+                    maxAttempts = MAX_RECONNECT_ATTEMPTS,
+                    nextRetryIn = delay
+                )
+
+                Timber.d("🔄 Reconnect attempt $reconnectAttempts/$MAX_RECONNECT_ATTEMPTS (delay: ${delay}ms)")
+
+                // Wait before retry
+                delay(delay)
+
+                // Try to connect
+                try {
+                    if (connect()) {
+                        Timber.d("✅ Auto-reconnect successful!")
+                        return@launch
+                    }
+                } catch (e: Exception) {
+                    Timber.w(e, "❌ Reconnect attempt $reconnectAttempts failed")
+                }
+
+                // Calculate next delay (exponential backoff)
+                delay = (delay * RECONNECT_MULTIPLIER).coerceAtMost(RECONNECT_MAX_DELAY)
+            }
+
+            // Max attempts reached
+            if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+                Timber.e("❌ Max reconnect attempts ($MAX_RECONNECT_ATTEMPTS) reached")
+                _connectionState.value = ConnectionState.Error(
+                    ErrorType.MAX_RETRY_REACHED,
+                    "Gagal reconnect setelah $MAX_RECONNECT_ATTEMPTS percobaan",
+                    canRetry = false
+                )
+            }
+        }
+    }
+
+    /**
+     * Stop auto-reconnect attempts
+     */
+    fun stopAutoReconnect() {
+        reconnectJob?.cancel()
+        reconnectJob = null
+    }
+
+    /**
+     * Enable/disable auto-reconnect
+     */
+    fun setAutoReconnectEnabled(enabled: Boolean) {
+        isAutoReconnectEnabled = enabled
+        Timber.d("Auto-reconnect ${if (enabled) "enabled" else "disabled"}")
+    }
+
+    /**
+     * Start reading data from Bluetooth
+     */
+    private fun startDataReading() {
         readingJob?.cancel()
-        readingJob = null
+        readingJob = bluetoothScope.launch {
+            val buffer = ByteArray(BUFFER_SIZE)
+            var dataBuffer = ""
 
-        try {
-            inputStream?.close()
-            outputStream?.close()
-            bluetoothSocket?.close()
-        } catch (e: IOException) {
-            Timber.e(e, "Error saat disconnect")
-        } finally {
-            inputStream = null
-            outputStream = null
-            bluetoothSocket = null
-            _connectionState.value = ConnectionState.Disconnected
-            Timber.d("🔴 Bluetooth disconnected")
+            while (isActive && bluetoothSocket?.isConnected == true) {
+                try {
+                    val bytesRead = inputStream?.read(buffer) ?: -1
+                    if (bytesRead > 0) {
+                        val chunk = String(buffer, 0, bytesRead)
+                        dataBuffer += chunk
+
+                        // Process complete lines
+                        while (dataBuffer.contains("\n")) {
+                            val lineEnd = dataBuffer.indexOf('\n')
+                            val line = dataBuffer.substring(0, lineEnd).trim()
+                            dataBuffer = dataBuffer.substring(lineEnd + 1)
+
+                            if (line.isNotEmpty()) {
+                                processDataLine(line)
+                            }
+                        }
+                    } else {
+                        // Connection lost
+                        Timber.w("⚠️ Bluetooth connection lost (bytesRead=$bytesRead)")
+                        _connectionState.value = ConnectionState.Error(
+                            ErrorType.CONNECTION_LOST,
+                            "Koneksi terputus"
+                        )
+
+                        // Trigger auto-reconnect
+                        if (isAutoReconnectEnabled) {
+                            startAutoReconnect()
+                        }
+                        break
+                    }
+                } catch (e: IOException) {
+                    Timber.e(e, "❌ Error reading Bluetooth data")
+                    _connectionState.value = ConnectionState.Error(
+                        ErrorType.CONNECTION_LOST,
+                        "Error reading data: ${e.message}"
+                    )
+
+                    // Trigger auto-reconnect
+                    if (isAutoReconnectEnabled) {
+                        startAutoReconnect()
+                    }
+                    break
+                }
+            }
         }
     }
 
+    /**
+     * Process incoming data line
+     */
+    private fun processDataLine(line: String) {
+        _incomingData.value = line
+        Timber.v("📥 BT RX: $line")
+
+        // Parse RS2 format
+        val sensorData = ESP32SensorData.fromBluetoothPacket(line)
+        if (sensorData != null) {
+            bus.publishSensorData(sensorData)
+        } else {
+            Timber.w("⚠️ Failed to parse packet: $line")
+        }
+    }
+
+    /**
+     * Send command to ESP32
+     */
     suspend fun sendCommand(command: String): Boolean = withContext(Dispatchers.IO) {
-        if (_connectionState.value != ConnectionState.Connected) {
-            Timber.w("⚠️ Tidak bisa kirim command, status = ${_connectionState.value}")
+        try {
+            if (bluetoothSocket?.isConnected != true) {
+                Timber.w("⚠️ Cannot send command: not connected")
+                return@withContext false
+            }
+
+            outputStream?.write("$command\n".toByteArray())
+            outputStream?.flush()
+            Timber.d("📤 BT TX: $command")
+            return@withContext true
+
+        } catch (e: IOException) {
+            Timber.e(e, "❌ Error sending command: $command")
             return@withContext false
         }
 
-        try {
-            val message = "$command\n"
-            outputStream?.write(message.toByteArray())
-            outputStream?.flush()
-            Timber.d("📤 Command terkirim: $command")
-            true
-        } catch (e: IOException) {
-            Timber.e(e, "❌ Gagal kirim command")
-            _connectionState.value = ConnectionState.Error("Gagal kirim: ${e.message}")
-            false
-        }
     }
-
+    /**
+     * Mengirim perintah kalibrasi ke ESP32.
+     * Format: CMD:CAL,DIAM=<diameter>,PULSE=<pulses>
+     */
     suspend fun sendCalibration(wheelDiameterCm: Float, pulsesPerRotation: Int): Boolean {
         val command = "CMD:CAL,DIAM=${wheelDiameterCm},PULSE=${pulsesPerRotation}"
         return sendCommand(command)
     }
 
-    fun isConnected(): Boolean = _connectionState.value == ConnectionState.Connected
+    /**
+     * Disconnect from ESP32
+     */
+    fun disconnect() {
+        try {
+            stopAutoReconnect()
+            readingJob?.cancel()
 
-    @SuppressLint("MissingPermission")
-    fun getPairedDevices(): List<BluetoothDevice> =
-        bluetoothAdapter?.bondedDevices?.toList() ?: emptyList()
+            inputStream?.close()
+            outputStream?.close()
+            bluetoothSocket?.close()
 
-    // -------------------------------------------------------------------------
-    //  PRIVATE METHODS – COROUTINE BASED READING
-    // -------------------------------------------------------------------------
+            bluetoothSocket = null
+            inputStream = null
+            outputStream = null
+
+            _connectionState.value = ConnectionState.Disconnected
+            bus.publishSensorData(null)
+
+            Timber.d("🔴 Disconnected from $ESP32_NAME")
+
+        } catch (e: Exception) {
+            Timber.e(e, "Error during disconnect")
+        }
+    }
 
     /**
-     * Memulai flow pembacaan dari InputStream menggunakan callbackFlow.
-     * Setiap line yang diterima akan diemit ke _incomingData dan juga dipublish ke event bus.
+     * Check if connected
      */
-    private fun startReading() {
-        if (inputStream == null) {
-            Timber.e("InputStream null, tidak bisa membaca")
-            return
+    fun isConnected(): Boolean {
+        return bluetoothSocket?.isConnected == true
+    }
+
+    /**
+     * Get current error if any
+     */
+    fun getCurrentError(): ErrorType? {
+        return when (val state = _connectionState.value) {
+            is ConnectionState.Error -> state.type
+            else -> null
         }
+    }
 
-        readingJob = callbackFlow {
-            val stream = inputStream ?: throw IOException("InputStream null")
-            val buffer = ByteArray(BUFFER_SIZE)
-            val stringBuilder = StringBuilder()
+    /**
+     * Manual retry connection
+     */
+    suspend fun retryConnection(): Boolean {
+        stopAutoReconnect()
+        reconnectAttempts = 0
+        return connect()
+    }
 
-            while (isConnected() && !isClosedForSend) {
-                try {
-                    val bytesRead = stream.read(buffer)
-                    if (bytesRead == -1) {
-                        // EOF – koneksi terputus dari sisi remote
-                        close()
-                        break
-                    }
-
-                    val chunk = String(buffer, 0, bytesRead)
-                    stringBuilder.append(chunk)
-
-                    var newlineIndex = stringBuilder.indexOf("\n")
-                    while (newlineIndex != -1) {
-                        val line = stringBuilder.substring(0, newlineIndex).trim()
-                        stringBuilder.delete(0, newlineIndex + 1)
-
-                        if (line.isNotEmpty()) {
-                            // Kirim ke flow
-                            trySend(line)
-
-                            // Parse & publish ke event bus
-                            ESP32SensorData.fromBluetoothPacket(line)?.let { sensorData ->
-                                bus.publishSensorData(sensorData)
-                            }
-                        }
-                        newlineIndex = stringBuilder.indexOf("\n")
-                    }
-                } catch (e: IOException) {
-                    // Jika masih connected, anggap error, lalu stop
-                    if (isConnected()) {
-                        _connectionState.value = ConnectionState.Error("Read error: ${e.message}")
-                    }
-                    close(e)
-                    break
-                }
-            }
-
-            // Cleanup
-            close()
-        }
-            .catch { e ->
-                Timber.e(e, "❌ Bluetooth read flow error")
-                if (isConnected()) {
-                    _connectionState.value = ConnectionState.Error("Flow error: ${e.message}")
-                }
-            }
-            .onEach { line ->
-                // Update StateFlow dengan line terbaru
-                _incomingData.value = line
-            }
-            .launchIn(bluetoothScope)  // dikoleksi di scope khusus
+    /**
+     * Clean up resources
+     */
+    fun cleanup() {
+        disconnect()
+        bluetoothScope.cancel()
     }
 }
