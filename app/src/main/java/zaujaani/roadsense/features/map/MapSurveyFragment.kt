@@ -19,6 +19,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.modules.OfflineTileProvider
@@ -29,6 +30,7 @@ import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Overlay
+import org.osmdroid.views.overlay.Polygon
 import org.osmdroid.views.overlay.Polyline
 import timber.log.Timber
 import zaujaani.roadsense.R
@@ -44,19 +46,29 @@ import java.util.*
 @AndroidEntryPoint
 class MapSurveyFragment : Fragment() {
 
+    // ========== PROPERTIES ==========
     private var _binding: FragmentMapSurveyBinding? = null
     private val binding get() = _binding!!
 
     private val viewModel: MapViewModel by viewModels()
 
+    // OSMdroid
     private lateinit var mapView: MapView
     private lateinit var trackingPolyline: Polyline
     private lateinit var segmentPolyline: Polyline
     private lateinit var startMarker: Marker
     private lateinit var endMarker: Marker
-    private var currentLocationMarker: Marker? = null
+
+    // Overlays modern (Polygon untuk lingkaran akurasi)
+    private var currentLocationDotMarker: Marker? = null
+    private var currentLocationAccuracyPolygon: Polygon? = null
+    private var distanceMarker: Marker? = null
     private var mapTapOverlay: Overlay? = null
 
+    // State
+    private var hasCenteredMap = false
+
+    // Permission
     private val locationPermissionRequest = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -77,6 +89,7 @@ class MapSurveyFragment : Fragment() {
         }
     }
 
+    // ========== LIFECYCLE ==========
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -100,6 +113,27 @@ class MapSurveyFragment : Fragment() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        mapView.onResume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        mapView.onPause()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        // Bersihkan overlay kustom
+        currentLocationDotMarker?.let { mapView.overlays.remove(it) }
+        currentLocationAccuracyPolygon?.let { mapView.overlays.remove(it) }
+        distanceMarker?.let { mapView.overlays.remove(it) }
+        mapView.onDetach()
+        _binding = null
+    }
+
+    // ========== MAP INIT ==========
     private fun initializeMap() {
         val ctx = requireContext()
 
@@ -113,13 +147,13 @@ class MapSurveyFragment : Fragment() {
         Configuration.getInstance().apply {
             userAgentValue = ctx.packageName
             osmdroidTileCache = tileCacheDir
-
             val sharedPrefs = ctx.getSharedPreferences("osmdroid_prefs", Context.MODE_PRIVATE)
             load(ctx, sharedPrefs)
         }
 
         mapView = binding.mapView
 
+        // Offline tiles
         val archiveFiles = tileArchiveDir.listFiles { file ->
             file.extension == "sqlite" || file.extension == "zip" || file.extension == "mbtiles"
         }
@@ -146,6 +180,7 @@ class MapSurveyFragment : Fragment() {
             controller.setZoom(15.0)
         }
 
+        // Polyline tracking
         trackingPolyline = Polyline(mapView).apply {
             outlinePaint.color = ContextCompat.getColor(ctx, R.color.tracking_line)
             outlinePaint.strokeWidth = 8f
@@ -154,6 +189,7 @@ class MapSurveyFragment : Fragment() {
         }
         mapView.overlays.add(trackingPolyline)
 
+        // Polyline segmen (dashed)
         segmentPolyline = Polyline(mapView).apply {
             outlinePaint.color = ContextCompat.getColor(ctx, R.color.segment_line)
             outlinePaint.strokeWidth = 12f
@@ -163,12 +199,14 @@ class MapSurveyFragment : Fragment() {
         }
         mapView.overlays.add(segmentPolyline)
 
+        // Marker start
         startMarker = Marker(mapView).apply {
             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
             icon = ContextCompat.getDrawable(ctx, R.drawable.ic_marker_start)
             isDraggable = true
         }
 
+        // Marker end
         endMarker = Marker(mapView).apply {
             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
             icon = ContextCompat.getDrawable(ctx, R.drawable.ic_marker_end)
@@ -176,23 +214,29 @@ class MapSurveyFragment : Fragment() {
         }
     }
 
+    // ========== UI SETUP ==========
     private fun setupUI() {
         updateUIState(viewModel.uiState.value)
     }
 
+    // ========== OBSERVERS (dengan debounce) ==========
     private fun setupObservers() {
+        // UI State – debounce 50ms untuk performa
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.uiState.collect { state ->
-                    if (_binding != null) {
-                        updateUIState(state)
-                        updateMapVisuals(state)
-                        updateZAxisValidation(state)
+                viewModel.uiState
+                    .debounce(50)
+                    .collect { state: MapViewModel.MapUiState ->
+                        if (_binding != null) {
+                            updateUIState(state)
+                            updateMapVisuals(state)
+                            updateZAxisValidation(state)
+                        }
                     }
-                }
             }
         }
 
+        // Tracking points
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.trackingPoints.collect { points ->
@@ -201,6 +245,7 @@ class MapSurveyFragment : Fragment() {
             }
         }
 
+        // Segment creation points
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.segmentCreationPoints.collect { points ->
@@ -209,6 +254,7 @@ class MapSurveyFragment : Fragment() {
             }
         }
 
+        // Saved segments
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.segments.collect { segments ->
@@ -217,6 +263,7 @@ class MapSurveyFragment : Fragment() {
             }
         }
 
+        // Device ready state
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.deviceReadyState.collect { state ->
@@ -226,6 +273,7 @@ class MapSurveyFragment : Fragment() {
         }
     }
 
+    // ========== Z-AXIS VALIDATION ==========
     private fun updateZAxisValidation(state: MapViewModel.MapUiState) {
         if (_binding == null) return
 
@@ -271,6 +319,7 @@ class MapSurveyFragment : Fragment() {
         binding.btnAddSurvey.isEnabled = isAddEnabled
     }
 
+    // ========== DEVICE READY STATE ==========
     private fun updateDeviceReadyState(state: MapViewModel.DeviceReadyState) {
         if (_binding == null) return
         when (state) {
@@ -301,6 +350,7 @@ class MapSurveyFragment : Fragment() {
         }
     }
 
+    // ========== CLICK LISTENERS ==========
     private fun setupClickListeners() {
         binding.btnStartStop.setOnClickListener {
             if (viewModel.uiState.value.isTracking) {
@@ -326,6 +376,7 @@ class MapSurveyFragment : Fragment() {
             centerMapOnCurrentLocation()
         }
 
+        // Map tap untuk segment creation
         if (mapTapOverlay == null) {
             mapTapOverlay = object : Overlay() {
                 override fun onSingleTapConfirmed(e: MotionEvent?, mapView: MapView?): Boolean {
@@ -347,6 +398,7 @@ class MapSurveyFragment : Fragment() {
         }
     }
 
+    // ========== UI STATE UPDATE ==========
     private fun updateUIState(state: MapViewModel.MapUiState) {
         if (_binding == null) return
 
@@ -452,26 +504,77 @@ class MapSurveyFragment : Fragment() {
         }
     }
 
+    // ========== MODERN LOCATION MARKER dengan POLYGON untuk AKURASI ==========
+    /**
+     * Membuat titik-titik polygon berbentuk lingkaran.
+     * @param center Titik pusat
+     * @param radius Radius dalam meter
+     * @param sides Jumlah sisi (semakin banyak semakin bulat, 36 cukup)
+     */
+    private fun createCirclePolygonPoints(center: GeoPoint, radius: Double, sides: Int = 36): ArrayList<GeoPoint> {
+        val points = ArrayList<GeoPoint>()
+        val earthRadius = 6378137.0 // Radius bumi dalam meter (WGS84)
+        val lat = Math.toRadians(center.latitude)
+        val lon = Math.toRadians(center.longitude)
+
+        for (i in 0 until sides) {
+            val angle = (2 * Math.PI * i) / sides
+            val dLat = (radius / earthRadius) * Math.cos(angle)
+            val dLon = (radius / earthRadius) * Math.sin(angle) / Math.cos(lat)
+
+            val newLat = Math.toDegrees(lat + dLat)
+            val newLon = Math.toDegrees(lon + dLon)
+            points.add(GeoPoint(newLat, newLon))
+        }
+        // Tutup polygon (kembali ke titik pertama)
+        points.add(points[0])
+        return points
+    }
+
     private fun updateMapVisuals(state: MapViewModel.MapUiState) {
         if (_binding == null) return
+
         state.currentLocation?.let { location ->
             val geoPoint = GeoPoint(location.latitude, location.longitude)
+            val accuracyMeters = location.accuracy.toDouble()
 
-            if (currentLocationMarker == null) {
-                currentLocationMarker = Marker(mapView).apply {
+            // 1. Lingkaran akurasi menggunakan POLYGON (bukan Circle)
+            if (currentLocationAccuracyPolygon == null) {
+                currentLocationAccuracyPolygon = Polygon(mapView).apply {
+                    points = createCirclePolygonPoints(geoPoint, accuracyMeters)
+                    outlinePaint.color = ContextCompat.getColor(requireContext(), R.color.accuracy_circle_stroke)
+                    outlinePaint.strokeWidth = 2f
+                    fillPaint.color = ContextCompat.getColor(requireContext(), R.color.accuracy_circle_fill)
+                    fillPaint.alpha = 32 // 12.5% opacity
+                }.also { mapView.overlays.add(it) }
+            } else {
+                currentLocationAccuracyPolygon?.apply {
+                    points = createCirclePolygonPoints(geoPoint, accuracyMeters)
+                }
+            }
+
+            // 2. Titik biru modern (layer-list drawable)
+            if (currentLocationDotMarker == null) {
+                currentLocationDotMarker = Marker(mapView).apply {
                     position = geoPoint
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                    icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_my_location)
+                    icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_location_dot)
                     title = getString(R.string.position_reference, location.accuracy)
-                    mapView.overlays.add(this)
-                }
+                }.also { mapView.overlays.add(it) }
             } else {
-                currentLocationMarker?.position = geoPoint
-                currentLocationMarker?.title = getString(R.string.position_reference, location.accuracy)
+                currentLocationDotMarker?.position = geoPoint
+                currentLocationDotMarker?.title = getString(R.string.position_reference, location.accuracy)
+            }
+
+            // 3. Auto-center pertama kali dengan animasi
+            if (!hasCenteredMap) {
+                mapView.controller.animateTo(geoPoint, 18.0, 800L)
+                hasCenteredMap = true
             }
         }
     }
 
+    // ========== POLYLINES ==========
     private fun updateTrackingPolyline(points: List<GeoPoint>) {
         if (_binding == null) return
         trackingPolyline.setPoints(points)
@@ -503,27 +606,26 @@ class MapSurveyFragment : Fragment() {
                     mapView.overlays.add(endMarker)
                 }
 
-                mapView.overlays.removeAll { overlay ->
-                    overlay is Marker && overlay.title?.startsWith(getString(R.string.distance_prefix)) == true
-                }
+                // Hapus marker jarak sebelumnya
+                distanceMarker?.let { mapView.overlays.remove(it) }
 
                 val sensorDistance = viewModel.uiState.value.tripDistance
                 val midpoint = GeoPoint(
                     (points[0].latitude + points[1].latitude) / 2,
                     (points[0].longitude + points[1].longitude) / 2
                 )
-                val distanceMarker = Marker(mapView).apply {
+                distanceMarker = Marker(mapView).apply {
                     position = midpoint
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                     icon = null
                     title = getString(R.string.distance_sensor, sensorDistance)
-                }
-                mapView.overlays.add(distanceMarker)
+                }.also { mapView.overlays.add(it) }
             }
         }
         mapView.invalidate()
     }
 
+    // ========== SAVED SEGMENTS ==========
     private fun displaySavedSegments(segments: List<zaujaani.roadsense.data.local.RoadSegment>) {
         if (_binding == null) return
         val toRemove = mapView.overlays.filter { overlay ->
@@ -564,6 +666,7 @@ class MapSurveyFragment : Fragment() {
         mapView.invalidate()
     }
 
+    // ========== PERMISSIONS ==========
     private fun checkLocationPermissions() {
         val requiredPermissions = arrayOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
@@ -577,6 +680,7 @@ class MapSurveyFragment : Fragment() {
         }
     }
 
+    // ========== SURVEY CONTROL ==========
     private fun startSurvey() {
         lifecycleScope.launch {
             val result = viewModel.startSurvey()
@@ -692,21 +796,5 @@ class MapSurveyFragment : Fragment() {
                 .setNegativeButton(getString(R.string.cancel), null)
                 .show()
         }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        mapView.onResume()
-    }
-
-    override fun onPause() {
-        super.onPause()
-        mapView.onPause()
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        mapView.onDetach()
-        _binding = null
     }
 }

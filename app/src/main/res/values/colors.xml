@@ -160,7 +160,10 @@
 
     <color name="gps_very_poor">#6B7280</color>
     <color name="splash_background">#FF6200EE</color>   <!-- ganti sesuai brand lo -->
-    <color name="splash_icon_bg">#FFFFFF</color>        <!-- optional, buat background ikon -->
+    <color name="splash_icon_bg">#FFFFFF</color>
+    <color name="location_blue">#FF4285F4</color>        <!-- Google Blue -->
+    <color name="accuracy_circle_fill">#1A4285F4</color>  <!-- Biru transparan 10% -->
+    <color name="accuracy_circle_stroke">#FF4285F4</color><!-- optional, buat background ikon -->
 
 
 </resources>
