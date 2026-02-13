@@ -145,16 +145,12 @@ class SurveyBottomSheet : BottomSheetDialogFragment() {
             Confidence.LOW -> "❓ Data perlu verifikasi manual (GPS buruk atau kecepatan/getaran tidak normal)"
         }
 
-        // ✅ SAFE CALL untuk view yang mungkin belum ada di layout
-        binding.tvValidationMessages?.let {
-            it.visibility = if (validationMessages.isNotEmpty()) View.VISIBLE else View.GONE
-            it.text = validationMessages.joinToString("\n")
-        }
+        // ✅ FIXED: Removed unnecessary safe calls
+        binding.tvValidationMessages.visibility = if (validationMessages.isNotEmpty()) View.VISIBLE else View.GONE
+        binding.tvValidationMessages.text = validationMessages.joinToString("\n")
 
-        binding.warningCard?.let {
-            it.visibility = if (confidence == Confidence.LOW) View.VISIBLE else View.GONE
-        }
-        binding.tvWarning?.text = "⚠️ Confidence rendah - Pastikan data sudah benar atau ulang perekaman"
+        binding.warningCard.visibility = if (confidence == Confidence.LOW) View.VISIBLE else View.GONE
+        binding.tvWarning.text = "⚠️ Confidence rendah - Pastikan data sudah benar atau ulang perekaman"
     }
 
     private fun setupConditionSelection() {
@@ -177,7 +173,7 @@ class SurveyBottomSheet : BottomSheetDialogFragment() {
     private fun setupMediaButtons() {
         binding.btnTakePhoto.setOnClickListener { checkCameraPermission() }
         binding.btnRecordVoice.setOnClickListener { startVoiceRecording() }
-        binding.btnAddTag?.setOnClickListener { showTagDialog() } // ✅ SAFE CALL
+        binding.btnAddTag.setOnClickListener { showTagDialog() } // ✅ FIXED: Removed safe call
     }
 
     private fun setupActionButtons() {

@@ -12,8 +12,7 @@ import zaujaani.roadsense.core.gps.GPSFusionEngine
 import zaujaani.roadsense.core.gps.GPSGateway
 import zaujaani.roadsense.core.sensor.SensorGateway
 import zaujaani.roadsense.data.local.*
-import zaujaani.roadsense.data.repository.SurveyRepository
-import zaujaani.roadsense.data.repository.TelemetryRepository
+import zaujaani.roadsense.data.repository.*
 import zaujaani.roadsense.domain.engine.QualityScoreCalculator
 import zaujaani.roadsense.domain.engine.SurveyEngine
 import javax.inject.Singleton
@@ -58,6 +57,14 @@ object AppModule {
     fun provideTelemetryRepository(telemetryDao: TelemetryDao): TelemetryRepository =
         TelemetryRepository(telemetryDao)
 
+    // 🔥 UserPreferencesRepository – digunakan oleh SettingsViewModel
+    @Suppress("unused")
+    @Provides
+    @Singleton
+    fun provideUserPreferencesRepository(
+        @ApplicationContext context: Context
+    ): UserPreferencesRepository = UserPreferencesRepository(context)
+
     // ----- EVENT BUS -----
     @Provides
     @Singleton
@@ -71,7 +78,6 @@ object AppModule {
         bus: RealtimeRoadsenseBus
     ): BluetoothGateway = BluetoothGateway(context, bus)
 
-    // ✅ UPDATE: GPSGateway dengan 3 parameter (setelah constructor diubah)
     @Provides
     @Singleton
     fun provideGPSGateway(

@@ -15,7 +15,6 @@ class SummaryViewModel @Inject constructor(
     private val repository: SurveyRepository
 ) : ViewModel() {
 
-    // Backing property – bisa tetap public jika diperlukan, di‑suppress warning
     private val _summaryData = MutableStateFlow<List<RoadSegmentSummary>>(emptyList())
     @Suppress("Unused")
     val summaryData: StateFlow<List<RoadSegmentSummary>> = _summaryData
@@ -83,27 +82,25 @@ class SummaryViewModel @Inject constructor(
         }
     }
 
+    // 🔥 FIX: Gunakan firstOrNull() untuk menghindari blocking
     private suspend fun getAllSessionsSegments(): List<RoadSegmentSummary> {
         val allSegments = mutableListOf<RoadSegmentSummary>()
-
-        try {
-            // ✅ explicit type argument dihapus (inferred)
-            repository.getAllSessions()
-                .first()
-                .forEach { session ->
-                    try {
-                        val segments = repository.getSummaryBySession(session.id)
-                        allSegments.addAll(segments)
-                        Timber.d("Loaded ${segments.size} segments from session ${session.id}")
-                    } catch (e: Exception) {
-                        Timber.e(e, "Error loading segments for session ${session.id}")
-                    }
-                }
-        } catch (e: Exception) {
-            Timber.e(e, "Error loading sessions")
+        val sessions = repository.getAllSessions().firstOrNull() ?: emptyList()
+        sessions.forEach { session ->
+            try {
+                val segments = repository.getSummaryBySession(session.id)
+                allSegments.addAll(segments)
+                Timber.d("Loaded ${segments.size} segments from session ${session.id}")
+            } catch (e: Exception) {
+                Timber.e(e, "Error loading segments for session ${session.id}")
+            }
         }
-
         return allSegments.sortedByDescending { it.segment.timestamp }
+    }
+
+    // 🔥 NEW: Hapus segmen
+    suspend fun deleteSegment(segmentId: Long) {
+        repository.deleteRoadSegment(segmentId)
     }
 
     fun setFilterCondition(condition: String?) {
@@ -129,30 +126,24 @@ class SummaryViewModel @Inject constructor(
         confidence: String?,
         sortBy: SortBy
     ): List<RoadSegmentSummary> {
-        var filtered = data
-
-        condition?.takeIf { it.isNotBlank() }?.let { filter ->
-            filtered = filtered.filter { it.segment.condition.equals(filter, ignoreCase = true) }
-        }
-
-        surface?.takeIf { it.isNotBlank() }?.let { filter ->
-            filtered = filtered.filter { it.segment.surface.equals(filter, ignoreCase = true) }
-        }
-
-        confidence?.takeIf { it.isNotBlank() }?.let { filter ->
-            filtered = filtered.filter { it.segment.confidence.equals(filter, ignoreCase = true) }
-        }
-
-        return when (sortBy) {
-            SortBy.DATE_ASC -> filtered.sortedBy { it.segment.timestamp }
-            SortBy.DATE_DESC -> filtered.sortedByDescending { it.segment.timestamp }
-            SortBy.DISTANCE_ASC -> filtered.sortedBy { it.segment.distanceMeters }
-            SortBy.DISTANCE_DESC -> filtered.sortedByDescending { it.segment.distanceMeters }
-            SortBy.SEVERITY_ASC -> filtered.sortedBy { it.segment.severity }
-            SortBy.SEVERITY_DESC -> filtered.sortedByDescending { it.segment.severity }
-            SortBy.SPEED_ASC -> filtered.sortedBy { it.segment.avgSpeed }
-            SortBy.SPEED_DESC -> filtered.sortedByDescending { it.segment.avgSpeed }
-        }
+        return data
+            .filter { segment ->
+                (condition == null || segment.segment.condition.equals(condition, ignoreCase = true)) &&
+                        (surface == null || segment.segment.surface.equals(surface, ignoreCase = true)) &&
+                        (confidence == null || segment.segment.confidence.equals(confidence, ignoreCase = true))
+            }
+            .sortedWith(
+                when (sortBy) {
+                    SortBy.DATE_ASC -> compareBy { it.segment.timestamp }
+                    SortBy.DATE_DESC -> compareByDescending { it.segment.timestamp }
+                    SortBy.DISTANCE_ASC -> compareBy { it.segment.distanceMeters }
+                    SortBy.DISTANCE_DESC -> compareByDescending { it.segment.distanceMeters }
+                    SortBy.SEVERITY_ASC -> compareBy { it.segment.severity }
+                    SortBy.SEVERITY_DESC -> compareByDescending { it.segment.severity }
+                    SortBy.SPEED_ASC -> compareBy { it.segment.avgSpeed }
+                    SortBy.SPEED_DESC -> compareByDescending { it.segment.avgSpeed }
+                }
+            )
     }
 
     fun getFilterOptions(): FilterOptions {

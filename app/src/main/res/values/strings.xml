@@ -225,7 +225,7 @@
     <string name="settings_bluetooth">Bluetooth</string>
     <string name="settings_gps">GPS</string>
     <string name="settings_data">Pengumpulan Data</string>
-    <string name="settings_about">Tentang</string>
+
     <string name="settings_notifications">Notifikasi</string>
     <string name="settings_help_support">Bantuan &amp; Dukungan</string>
     <string name="settings_bluetooth_desc">Konfigurasi perangkat Bluetooth</string>
@@ -321,7 +321,7 @@
     <string name="distance_format">%.2f km</string>
     <string name="vibration_format">Z: %.2fg</string>
     <string name="esp32_connected">ESP32: ✅ Connected</string>
-    <string name="packet_info_format">Packets: %d | Errors: %d</string>
+    <string name="packet_info_format">Paket: %1$d | Error: %2$d</string>
     <string name="gps_accuracy">📍 GPS: %s</string>
     <string name="position_reference">Position Reference\nAccuracy: %.1fm</string>
     <string name="segment_start">Segment Start</string>
@@ -343,6 +343,31 @@
     <string name="survey_started">Survey started - Sensor as primary source</string>
     <string name="msg_start_segment">Tap on map to set segment points (GPS optional)</string>
     <string name="msg_segment_start_set">Start point set (GPS position reference)</string>
+    <string name="title_settings">Settings</string>
+    <string name="settings_gps_title">GPS Tracking</string>
+    <string name="settings_gps_summary">Use GPS for position reference</string>
+    <string name="settings_bluetooth_title">Bluetooth</string>
+    <string name="settings_bluetooth_summary">Connect to ESP32 sensor</string>
+    <string name="settings_notifications_title">Notifications</string>
+    <string name="settings_notifications_summary">Show survey notifications</string>
+    <string name="settings_data_title">Data Collection</string>
+    <string name="settings_auto_save_title">Auto-save</string>
+    <string name="settings_auto_save_summary">Save telemetry every minute</string>
+    <string name="settings_vibration_title">Vibration Detection</string>
+    <string name="settings_vibration_summary">Analyze Z-axis vibration</string>
+    <string name="settings_data_management_title">Data Management</string>
+    <string name="settings_export_db">Export Database</string>
+    <string name="settings_clear_cache">Clear Cache</string>
+    <string name="settings_reset_defaults">Reset to Defaults</string>
+    <string name="settings_info_title">App Information</string>
+    <string name="settings_app_version">App Version</string>
+    <string name="settings_database_size">Database Size</string>
+    <string name="settings_about">About RoadSense</string>
+
+    <string name="app_version">v1.0.0</string>
+    <string name="app_logo">App Logo</string>
+
+
 
 
 

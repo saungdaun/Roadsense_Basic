@@ -1,8 +1,10 @@
 package zaujaani.roadsense.domain.engine
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import zaujaani.roadsense.core.events.RealtimeRoadsenseBus
 import java.text.SimpleDateFormat
@@ -17,6 +19,7 @@ import javax.inject.Singleton
  * - Menyimpan state survey (Running, Paused, Stopped, Idle)
  * - Generate session ID untuk setiap survey
  * - Menyimpan survey ID dari database
+ * - Memberi sinyal **ready** setelah inisialisasi selesai (fix race condition)
  *
  * ⚠️ TIDAK lagi melakukan parsing data ESP32.
  *    Parsing dilakukan di BluetoothGateway + ESP32SensorData.
@@ -24,7 +27,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class SurveyEngine @Inject constructor(
-    private val bus: RealtimeRoadsenseBus   // ✅ inject bus
+    private val bus: RealtimeRoadsenseBus
 ) {
 
     private val _surveyState = MutableStateFlow<SurveyState>(SurveyState.Idle)
@@ -35,6 +38,10 @@ class SurveyEngine @Inject constructor(
 
     private var currentSurveyId: Long = -1
 
+    // ========== READINESS SIGNAL ==========
+    private val _isReady = MutableStateFlow(false)
+    val isReady: StateFlow<Boolean> = _isReady.asStateFlow()
+
     sealed class SurveyState {
         object Idle : SurveyState()
         data class Running(val sessionId: String, val surveyId: Long) : SurveyState()
@@ -43,15 +50,31 @@ class SurveyEngine @Inject constructor(
     }
 
     /**
-     * Start new survey
+     * Start new survey (SUSPEND)
+     * - Reset readiness signal
+     * - Lakukan inisialisasi async
+     * - Set state & publish
+     * - Set ready = true setelah selesai
      */
-    fun startSurvey(sessionId: String, surveyId: Long) {
+    suspend fun startSurvey(sessionId: String, surveyId: Long) {
+        // 🔴 RESET readiness TERLEBIH DAHULU – krusial!
+        _isReady.value = false
+
+        // Simulasi / real initialization (misal: buka koneksi, alokasi buffer)
+        withContext(Dispatchers.IO) {
+            // Di sini bisa ditambahkan kode inisialisasi sesungguhnya.
+            Timber.d("🔄 SurveyEngine: initializing...")
+        }
+
         _currentSessionId.value = sessionId
         currentSurveyId = surveyId
         val state = SurveyState.Running(sessionId, surveyId)
         _surveyState.value = state
-        bus.publishSurveyState(state)   // ✅ publish
-        Timber.d("▶️ Survey started: sessionId=$sessionId, surveyId=$surveyId")
+        bus.publishSurveyState(state)
+
+        // ✅ Engine siap menerima data
+        _isReady.value = true
+        Timber.d("▶️ Survey started & ready: sessionId=$sessionId, surveyId=$surveyId")
     }
 
     /**
@@ -62,7 +85,7 @@ class SurveyEngine @Inject constructor(
         if (current is SurveyState.Running) {
             val state = SurveyState.Paused(current.sessionId, current.surveyId)
             _surveyState.value = state
-            bus.publishSurveyState(state)   // ✅ publish
+            bus.publishSurveyState(state)
             Timber.d("⏸️ Survey paused")
         }
     }
@@ -75,13 +98,13 @@ class SurveyEngine @Inject constructor(
         if (current is SurveyState.Paused) {
             val state = SurveyState.Running(current.sessionId, current.surveyId)
             _surveyState.value = state
-            bus.publishSurveyState(state)   // ✅ publish
+            bus.publishSurveyState(state)
             Timber.d("▶️ Survey resumed")
         }
     }
 
     /**
-     * Stop survey
+     * Stop survey – reset readiness signal
      */
     fun stopSurvey() {
         val current = _surveyState.value
@@ -89,13 +112,15 @@ class SurveyEngine @Inject constructor(
             is SurveyState.Running -> {
                 val state = SurveyState.Stopped(current.sessionId, current.surveyId)
                 _surveyState.value = state
-                bus.publishSurveyState(state)   // ✅ publish
+                bus.publishSurveyState(state)
+                _isReady.value = false
                 Timber.d("⏹️ Survey stopped")
             }
             is SurveyState.Paused -> {
                 val state = SurveyState.Stopped(current.sessionId, current.surveyId)
                 _surveyState.value = state
-                bus.publishSurveyState(state)   // ✅ publish
+                bus.publishSurveyState(state)
+                _isReady.value = false
                 Timber.d("⏹️ Survey stopped (from paused)")
             }
             else -> {
@@ -105,13 +130,14 @@ class SurveyEngine @Inject constructor(
     }
 
     /**
-     * Reset engine
+     * Reset engine – reset readiness signal
      */
     fun reset() {
         _surveyState.value = SurveyState.Idle
-        bus.publishSurveyState(SurveyState.Idle)   // ✅ publish
+        bus.publishSurveyState(SurveyState.Idle)
         _currentSessionId.value = null
         currentSurveyId = -1
+        _isReady.value = false
         Timber.d("🔄 Survey engine reset")
     }
 
@@ -127,21 +153,15 @@ class SurveyEngine @Inject constructor(
     /**
      * Get current survey ID
      */
-    fun getCurrentSurveyId(): Long {
-        return currentSurveyId
-    }
+    fun getCurrentSurveyId(): Long = currentSurveyId
 
     /**
      * Check if survey is running
      */
-    fun isRunning(): Boolean {
-        return _surveyState.value is SurveyState.Running
-    }
+    fun isRunning(): Boolean = _surveyState.value is SurveyState.Running
 
     /**
      * Check if survey is paused
      */
-    fun isPaused(): Boolean {
-        return _surveyState.value is SurveyState.Paused
-    }
+    fun isPaused(): Boolean = _surveyState.value is SurveyState.Paused
 }

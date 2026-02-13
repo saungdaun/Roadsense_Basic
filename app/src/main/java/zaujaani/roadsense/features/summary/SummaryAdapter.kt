@@ -268,22 +268,20 @@ class SummaryAdapter(
             }
         }
 
+        // ✅ FIXED: Removed unnecessary safe calls
         private fun ItemSegmentSummaryBinding.setDataSource(dataSource: String) {
-            // Gunakan safe call karena mungkin view-nya optional
-            tvDataSource?.let { source ->
-                when (dataSource) {
-                    "SENSOR_PRIMARY" -> {
-                        tvDataWarning?.visibility = View.GONE
-                        source.text = "Sumber: Sensor ESP32"
-                    }
-                    "GPS_ONLY" -> {
-                        tvDataWarning?.visibility = View.VISIBLE
-                        tvDataWarning?.text = "⚠️ Data hanya dari GPS"
-                        source.text = "Sumber: GPS saja"
-                    }
-                    else -> {
-                        source.text = "Sumber: $dataSource"
-                    }
+            when (dataSource) {
+                "SENSOR_PRIMARY" -> {
+                    tvDataWarning.visibility = View.GONE
+                    tvDataSource.text = "Sumber: Sensor ESP32"
+                }
+                "GPS_ONLY" -> {
+                    tvDataWarning.visibility = View.VISIBLE
+                    tvDataWarning.text = "⚠️ Data hanya dari GPS"
+                    tvDataSource.text = "Sumber: GPS saja"
+                }
+                else -> {
+                    tvDataSource.text = "Sumber: $dataSource"
                 }
             }
         }

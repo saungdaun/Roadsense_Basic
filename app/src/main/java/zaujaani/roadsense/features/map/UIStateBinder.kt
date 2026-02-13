@@ -6,7 +6,6 @@ import androidx.core.content.ContextCompat
 import zaujaani.roadsense.R
 import zaujaani.roadsense.databinding.FragmentMapSurveyBinding
 import zaujaani.roadsense.domain.usecase.ZAxisValidation
-import zaujaani.roadsense.features.map.MapViewModel
 
 class UIStateBinder(
     private val binding: FragmentMapSurveyBinding,
@@ -112,7 +111,8 @@ class UIStateBinder(
                 binding.btnStartStop.isEnabled = false
                 binding.tvStatus.text = context.getString(R.string.calibration_needed)
             }
-            else -> {
+            MapViewModel.DeviceReadyState.GPS_DISABLED,
+            MapViewModel.DeviceReadyState.BLUETOOTH_DISABLED -> {
                 binding.btnStartStop.isEnabled = false
             }
         }
@@ -136,8 +136,6 @@ class UIStateBinder(
                 Triple(R.color.heavy_damage_red, validation.message, false)
             is ZAxisValidation.SuspiciousPattern ->
                 Triple(R.color.fair_yellow, validation.message, false)
-            else ->
-                Triple(R.color.gray_300, context.getString(R.string.vibration_default), false)
         }
 
         binding.tvZAxisStatus.apply {

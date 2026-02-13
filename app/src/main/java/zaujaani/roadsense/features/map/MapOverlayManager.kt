@@ -15,6 +15,9 @@ import zaujaani.roadsense.data.local.RoadSegment
 import zaujaani.roadsense.domain.model.RoadCondition
 import zaujaani.roadsense.domain.model.SurfaceType
 import java.util.*
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.PI
 
 class MapOverlayManager(
     private val context: Context,
@@ -123,9 +126,9 @@ class MapOverlayManager(
         val lon = Math.toRadians(center.longitude)
 
         for (i in 0 until sides) {
-            val angle = (2 * Math.PI * i) / sides
-            val dLat = (radius / earthRadius) * Math.cos(angle)
-            val dLon = (radius / earthRadius) * Math.sin(angle) / Math.cos(lat)
+            val angle = (2 * PI * i) / sides
+            val dLat = (radius / earthRadius) * cos(angle)
+            val dLon = (radius / earthRadius) * sin(angle) / cos(lat)
             points.add(
                 GeoPoint(
                     Math.toDegrees(lat + dLat),

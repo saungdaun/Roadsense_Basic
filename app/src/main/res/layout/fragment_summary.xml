@@ -32,20 +32,20 @@
             android:layout_height="match_parent"
             android:orientation="vertical">
 
-            <!-- Summary Cards -->
+            <!-- Summary Stats Card -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_margin="@dimen/margin_large"
-                app:cardElevation="@dimen/card_elevation"
-                app:cardCornerRadius="@dimen/card_corner_radius">
+                android:layout_margin="16dp"
+                app:cardElevation="4dp"
+                app:cardCornerRadius="12dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:baselineAligned="false"
                     android:orientation="horizontal"
-                    android:padding="@dimen/margin_large"
+                    android:padding="16dp"
                     android:weightSum="2">
 
                     <LinearLayout
@@ -59,7 +59,7 @@
                             android:layout_height="wrap_content"
                             android:text="@string/total_distance"
                             android:textColor="@color/secondary_text"
-                            android:textSize="@dimen/text_small" />
+                            android:textSize="14sp" />
 
                         <TextView
                             android:id="@+id/tvTotalDistance"
@@ -67,7 +67,7 @@
                             android:layout_height="wrap_content"
                             android:text="@string/format_distance_km"
                             android:textColor="@color/primary_text"
-                            android:textSize="@dimen/text_xxlarge"
+                            android:textSize="32sp"
                             android:textStyle="bold"
                             tools:text="0.00 km" />
 
@@ -84,7 +84,7 @@
                             android:layout_height="wrap_content"
                             android:text="@string/segment_count"
                             android:textColor="@color/secondary_text"
-                            android:textSize="@dimen/text_small" />
+                            android:textSize="14sp" />
 
                         <TextView
                             android:id="@+id/tvSegmentCount"
@@ -92,7 +92,7 @@
                             android:layout_height="wrap_content"
                             android:text="@string/format_distance_m"
                             android:textColor="@color/primary_text"
-                            android:textSize="@dimen/text_xxlarge"
+                            android:textSize="32sp"
                             android:textStyle="bold"
                             tools:text="0 Segmen" />
 
@@ -102,13 +102,13 @@
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Filter & Export Row -->
+            <!-- Filter & Export Buttons -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:paddingHorizontal="@dimen/margin_large"
-                android:paddingBottom="@dimen/margin_medium">
+                android:paddingHorizontal="16dp"
+                android:paddingBottom="12dp">
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnFilter"
@@ -116,7 +116,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:layout_marginEnd="@dimen/margin_medium"
+                    android:layout_marginEnd="8dp"
                     android:text="@string/filter"
                     android:textAllCaps="false"
                     app:icon="@drawable/ic_filter"
@@ -127,8 +127,8 @@
                     style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
                     android:layout_weight="1"
-                    android:layout_marginEnd="@dimen/margin_medium"
                     android:text="@string/statistics"
                     android:textAllCaps="false"
                     app:icon="@drawable/ic_statistics"
@@ -147,29 +147,29 @@
 
             </LinearLayout>
 
-            <!-- Stats Chips (Condition & Confidence) -->
+            <!-- Statistics Chips -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:paddingHorizontal="@dimen/margin_large"
-                android:paddingBottom="@dimen/margin_medium">
+                android:paddingHorizontal="16dp"
+                android:paddingBottom="12dp">
 
                 <TextView
                     android:id="@+id/tvConditionStats"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textColor="@color/secondary_text"
-                    android:textSize="@dimen/text_xsmall"
+                    android:textSize="12sp"
                     tools:text="Baik: 0.00 km • Sedang: 0.00 km • Rusak: 0.00 km" />
 
                 <TextView
                     android:id="@+id/tvConfidenceStats"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/margin_small"
+                    android:layout_marginTop="4dp"
                     android:textColor="@color/secondary_text"
-                    android:textSize="@dimen/text_xsmall"
+                    android:textSize="12sp"
                     tools:text="Tinggi: 0 • Sedang: 0 • Rendah: 0" />
 
             </LinearLayout>
@@ -180,10 +180,12 @@
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1"
-                android:paddingHorizontal="@dimen/margin_large"
-                android:paddingBottom="@dimen/margin_large"
+                android:paddingHorizontal="16dp"
+                android:paddingBottom="16dp"
                 android:clipToPadding="false"
-                android:visibility="gone" />
+                android:visibility="gone"
+                tools:listitem="@layout/item_segment_summary"
+                tools:visibility="visible" />
 
             <!-- Empty State -->
             <LinearLayout
@@ -192,32 +194,34 @@
                 android:layout_height="match_parent"
                 android:gravity="center"
                 android:orientation="vertical"
-                android:padding="@dimen/margin_xlarge"
-                android:visibility="visible">
+                android:padding="32dp"
+                android:visibility="visible"
+                tools:visibility="visible">
 
                 <ImageView
                     android:layout_width="120dp"
                     android:layout_height="120dp"
                     android:src="@drawable/ic_empty_data"
                     app:tint="@color/gray_500" />
+                <!-- 🔥 contentDescription dihapus sementara – tambahkan string resource jika ingin aksesibilitas -->
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/margin_large"
+                    android:layout_marginTop="16dp"
                     android:text="@string/empty_summary_title"
                     android:textColor="@color/primary_text"
-                    android:textSize="@dimen/text_large"
+                    android:textSize="20sp"
                     android:textStyle="bold" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/margin_medium"
+                    android:layout_marginTop="8dp"
                     android:gravity="center"
                     android:text="@string/empty_summary_message"
                     android:textColor="@color/secondary_text"
-                    android:textSize="@dimen/text_medium" />
+                    android:textSize="16sp" />
 
             </LinearLayout>
 

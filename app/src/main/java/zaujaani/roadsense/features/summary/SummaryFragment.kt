@@ -50,7 +50,6 @@ class SummaryFragment : Fragment(), SummaryAdapter.SummaryActions, MenuProvider 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // ✅ Modern: MenuProvider (tidak deprecated)
         requireActivity().addMenuProvider(this, viewLifecycleOwner)
 
         setupToolbar()
@@ -62,7 +61,6 @@ class SummaryFragment : Fragment(), SummaryAdapter.SummaryActions, MenuProvider 
         viewModel.loadSummary(sessionId)
     }
 
-    // ========== MENU PROVIDER ==========
     override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
         menuInflater.inflate(R.menu.menu_summary_sort, menu)
     }
@@ -105,7 +103,6 @@ class SummaryFragment : Fragment(), SummaryAdapter.SummaryActions, MenuProvider 
         }
     }
 
-    // ========== TOOLBAR ==========
     private fun setupToolbar() {
         binding.toolbar.setNavigationOnClickListener {
             findNavController().navigateUp()
@@ -117,7 +114,6 @@ class SummaryFragment : Fragment(), SummaryAdapter.SummaryActions, MenuProvider 
         }
     }
 
-    // ========== RECYCLERVIEW ==========
     private fun setupRecyclerView() {
         adapter = SummaryAdapter(
             onItemClick = { segment -> showSegmentDetail(segment) },
@@ -134,21 +130,18 @@ class SummaryFragment : Fragment(), SummaryAdapter.SummaryActions, MenuProvider 
         }
     }
 
-    // ========== SWIPE REFRESH ==========
     private fun setupSwipeRefresh() {
         binding.swipeRefresh.setOnRefreshListener {
             viewModel.refresh()
         }
     }
 
-    // ========== CLICK LISTENERS ==========
     private fun setupClickListeners() {
-        binding.btnFilter?.setOnClickListener { showFilterDialog() }
-        binding.btnExportAll?.setOnClickListener { exportAllToCsv() }
-        binding.btnStats?.setOnClickListener { showStatistics() }
+        binding.btnFilter.setOnClickListener { showFilterDialog() }
+        binding.btnExportAll.setOnClickListener { exportAllToCsv() }
+        binding.btnStats.setOnClickListener { showStatistics() }
     }
 
-    // ========== OBSERVE VIEWMODEL ==========
     private fun observeViewModel() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
@@ -156,11 +149,11 @@ class SummaryFragment : Fragment(), SummaryAdapter.SummaryActions, MenuProvider 
                     binding.swipeRefresh.isRefreshing = false
                     if (list.isNotEmpty()) {
                         adapter.submitList(list)
-                        binding.emptyState?.visibility = View.GONE
+                        binding.emptyState.visibility = View.GONE
                         binding.recyclerView.visibility = View.VISIBLE
                         updateStatistics(list)
                     } else {
-                        binding.emptyState?.visibility = View.VISIBLE
+                        binding.emptyState.visibility = View.VISIBLE
                         binding.recyclerView.visibility = View.GONE
                         updateStatistics(emptyList())
                     }
@@ -173,27 +166,26 @@ class SummaryFragment : Fragment(), SummaryAdapter.SummaryActions, MenuProvider 
                 viewModel.error.collectLatest { errorMsg ->
                     if (errorMsg != null) {
                         Timber.e("Summary error: $errorMsg")
-                        // showToast(errorMsg) // optional
+                        showToast(errorMsg)
                     }
                 }
             }
         }
     }
 
-    // ========== STATISTIK ==========
     private fun updateStatistics(list: List<RoadSegmentSummary>) {
         val stats = viewModel.getStatistics()
-        binding.tvTotalDistance?.text = String.format(
+        binding.tvTotalDistance.text = String.format(
             Locale.getDefault(),
             "%.2f km",
             stats.totalDistance / 1000
         )
-        binding.tvSegmentCount?.text = "${stats.totalSegments} Segmen"
+        binding.tvSegmentCount.text = "${stats.totalSegments} Segmen"
 
         val conditionText = stats.conditionDistribution.entries.joinToString(" • ") { (cond, dist) ->
             "${RoadCondition.fromCode(cond).displayName}: ${String.format(Locale.getDefault(), "%.2f km", dist / 1000)}"
         }
-        binding.tvConditionStats?.text = conditionText
+        binding.tvConditionStats.text = conditionText
 
         val confidenceText = list.groupBy { it.confidence }.entries.joinToString(" • ") { (conf, items) ->
             val label = when (conf) {
@@ -203,10 +195,9 @@ class SummaryFragment : Fragment(), SummaryAdapter.SummaryActions, MenuProvider 
             }
             "$label: ${items.size}"
         }
-        binding.tvConfidenceStats?.text = confidenceText
+        binding.tvConfidenceStats.text = confidenceText
     }
 
-    // ========== FILTER DIALOG ==========
     private fun showFilterDialog() {
         val options = viewModel.getFilterOptions()
 
@@ -251,7 +242,6 @@ class SummaryFragment : Fragment(), SummaryAdapter.SummaryActions, MenuProvider 
             .show()
     }
 
-    // ========== EXPORT CSV ==========
     private fun exportAllToCsv() {
         lifecycleScope.launch {
             val csvData = viewModel.exportToCsv()
@@ -290,7 +280,6 @@ class SummaryFragment : Fragment(), SummaryAdapter.SummaryActions, MenuProvider 
         }
     }
 
-    // ========== STATISTICS DIALOG ==========
     private fun showStatistics() {
         val stats = viewModel.getStatistics()
         val message = buildString {
@@ -326,13 +315,14 @@ class SummaryFragment : Fragment(), SummaryAdapter.SummaryActions, MenuProvider 
     }
 
     // ========== SUMMARY ACTIONS ==========
-    @Suppress("UNUSED_PARAMETER")
+    // ✅ FIXED: Keep parameter name 'summary' to match interface, but don't use it (warning is OK)
     override fun onExportClicked(summary: RoadSegmentSummary) {
+        // TODO: Implement single segment export using 'summary' parameter
         showToast("Export single segment belum tersedia")
     }
 
-    @Suppress("UNUSED_PARAMETER")
     override fun onEditClicked(summary: RoadSegmentSummary) {
+        // TODO: Implement edit functionality using 'summary' parameter
         showToast("Edit segmen belum tersedia")
     }
 
@@ -342,9 +332,13 @@ class SummaryFragment : Fragment(), SummaryAdapter.SummaryActions, MenuProvider 
             .setMessage("Yakin ingin menghapus ${summary.roadName}?")
             .setPositiveButton("Hapus") { _, _ ->
                 lifecycleScope.launch {
-                    // TODO: panggil repository.deleteSegment(summary.segment.id)
-                    showToast("Segmen dihapus")
-                    viewModel.refresh()
+                    try {
+                        viewModel.deleteSegment(summary.segment.id)
+                        showToast("✅ Segmen dihapus")
+                        viewModel.refresh()
+                    } catch (e: Exception) {
+                        showToast("❌ Gagal menghapus: ${e.message}")
+                    }
                 }
             }
             .setNegativeButton("Batal", null)

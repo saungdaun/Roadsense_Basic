@@ -30,6 +30,16 @@ import javax.inject.Inject
  * ✅ Never stop survey on GPS drop
  * ✅ Clean separation: UI State vs Business Logic
  * ✅ All data saved with quality flags for audit trail
+ *
+ * FIX RACE CONDITION:
+ * ✅ Reset readiness di SurveyEngine.startSurvey()
+ * ✅ Tunggu isReady == true sebelum mengirim CMD:START
+ *
+ * FIX FLOW LEAK:
+ * ✅ flatMapLatest untuk telemetry points collector
+ *
+ * FIX DEAD STATE:
+ * ✅ zAxisValidation di MapUiState selalu di-update
  */
 @HiltViewModel
 class MapViewModel @Inject constructor(
@@ -39,7 +49,7 @@ class MapViewModel @Inject constructor(
     private val surveyRepository: SurveyRepository,
     private val telemetryRepository: TelemetryRepository,
     private val qualityScoreCalculator: QualityScoreCalculator,
-    private val zAxisValidationHelper: ZAxisValidationHelper   // ✅ Inject helper baru
+    private val zAxisValidationHelper: ZAxisValidationHelper
 ) : ViewModel() {
 
     // ========== UI STATE ==========
@@ -63,13 +73,15 @@ class MapViewModel @Inject constructor(
     // ========== INTERNAL STATE ==========
     private var currentSessionId: Long = -1L
     private var latestSensorData: ESP32SensorData? = null
-    private var latestZAxisValidation: ZAxisValidation? = null   // ✅ Simpan hasil validasi
+    private var latestZAxisValidation: ZAxisValidation? = null
 
     // ========== INITIALIZATION ==========
     init {
         Timber.d("🎯 MapViewModel initialized")
         observeBus()
         observeSurveyState()
+        observeBluetooth()
+        observeTrackingPoints() // ✅ single collector with flatMapLatest
         loadSavedSegments()
         checkDeviceReadyState()
     }
@@ -84,17 +96,14 @@ class MapViewModel @Inject constructor(
             bus.sensorData
                 .filterNotNull()
                 .collect { sensorData ->
-                    // Store latest data
                     latestSensorData = sensorData
 
-                    // ✅ Validasi Z-Axis dengan helper
                     val validation = zAxisValidationHelper.validate(
                         accelZ = sensorData.accelZ,
                         speed = sensorData.currentSpeed
                     )
                     latestZAxisValidation = validation
 
-                    // ✅ Mapping ke Confidence enum untuk UI
                     val confidence = when (validation) {
                         is ZAxisValidation.ValidMoving -> when {
                             validation.confidence > 0.7f -> Confidence.HIGH
@@ -104,7 +113,7 @@ class MapViewModel @Inject constructor(
                         else -> Confidence.LOW
                     }
 
-                    // Update UI state
+                    // ✅ Update UI state dengan validation object
                     _uiState.update {
                         it.copy(
                             currentSpeed = sensorData.currentSpeed,
@@ -114,7 +123,8 @@ class MapViewModel @Inject constructor(
                             batteryVoltage = sensorData.batteryVoltage,
                             temperature = sensorData.temperature,
                             zAxisConfidence = confidence,
-                            validationColor = validation.color.name
+                            validationColor = validation.color.name,
+                            zAxisValidation = validation // 🔥 FIX: dead state dihilangkan
                         )
                     }
 
@@ -131,7 +141,6 @@ class MapViewModel @Inject constructor(
                     )
                 }
 
-                // Update GPS signal strength
                 val strength = when {
                     location == null -> SignalStrength.NONE
                     location.accuracy < 10f -> SignalStrength.EXCELLENT
@@ -160,18 +169,18 @@ class MapViewModel @Inject constructor(
                 when (state) {
                     is SurveyEngine.SurveyState.Running -> {
                         currentSessionId = state.surveyId
-                        collectTrackingPoints(state.surveyId)
+                        // tracking points sekarang di-handle oleh observeTrackingPoints()
                     }
                     is SurveyEngine.SurveyState.Stopped -> {
                         currentSessionId = -1L
                         _trackingPoints.value = emptyList()
                         latestSensorData = null
                         latestZAxisValidation = null
-                        zAxisValidationHelper.reset()   // ✅ Reset helper saat survey berhenti
+                        zAxisValidationHelper.reset()
+                        // ✅ Reset juga validation di UI state
+                        _uiState.update { it.copy(zAxisValidation = null) }
                     }
-                    else -> {
-                        // Paused or Idle - keep session ID
-                    }
+                    else -> { /* Paused or Idle - keep session ID */ }
                 }
             }
         }
@@ -191,21 +200,26 @@ class MapViewModel @Inject constructor(
     }
 
     /**
-     * Collect GPS tracking points for map display
+     * ✅ ANTI-LEAK TELEMETRY POINTS COLLECTOR
+     * Menggunakan flatMapLatest untuk menghindari multiple collectors.
+     * Hanya satu collector seumur hidup ViewModel.
      */
-    private fun collectTrackingPoints(sessionId: Long) {
+    private fun observeTrackingPoints() {
         viewModelScope.launch {
-            try {
-                telemetryRepository.getTelemetryRawBySession(sessionId)
-                    .collect { telemetryList ->
-                        val points = telemetryList
-                            .filter { it.latitude != null && it.longitude != null }
-                            .map { GeoPoint(it.latitude!!, it.longitude!!) }
-                        _trackingPoints.value = points
+            bus.surveyState
+                .flatMapLatest { state ->
+                    if (state is SurveyEngine.SurveyState.Running) {
+                        telemetryRepository.getTelemetryRawBySession(state.surveyId)
+                    } else {
+                        flowOf(emptyList())
                     }
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to load tracking points")
-            }
+                }
+                .collect { telemetryList ->
+                    val points = telemetryList
+                        .filter { it.latitude != null && it.longitude != null }
+                        .map { GeoPoint(it.latitude!!, it.longitude!!) }
+                    _trackingPoints.value = points
+                }
         }
     }
 
@@ -248,7 +262,9 @@ class MapViewModel @Inject constructor(
     }
 
     /**
-     * Start survey session
+     * Start survey session – FIX RACE CONDITION (final)
+     * - Reset readiness sudah di dalam SurveyEngine.startSurvey()
+     * - Tunggu isReady == true baru kirim perintah hardware
      */
     suspend fun startSurvey(): SurveyStartResult {
         return try {
@@ -270,10 +286,16 @@ class MapViewModel @Inject constructor(
             val newSessionId = surveyRepository.createSurveySession(session)
             currentSessionId = newSessionId
 
+            // 1️⃣ Mulai engine (suspend, akan reset isReady = false, lalu inisialisasi, lalu true)
             surveyEngine.startSurvey(sessionIdStr, newSessionId)
+
+            // 2️⃣ ⏳ Tunggu sampai engine benar-benar ready
+            surveyEngine.isReady.first { it }
+
+            // 3️⃣ Kirim perintah ke hardware (ESP32)
             bluetoothGateway.sendCommand("CMD:START")
 
-            // ✅ Reset Z-Axis validation history untuk survey baru
+            // Reset Z-Axis validation history untuk survey baru
             zAxisValidationHelper.reset()
 
             Timber.i("✅ Survey started: Session ID = $newSessionId")
@@ -316,7 +338,8 @@ class MapViewModel @Inject constructor(
                     packetCount = 0,
                     errorCount = 0,
                     zAxisConfidence = Confidence.LOW,
-                    validationColor = ""
+                    validationColor = "",
+                    zAxisValidation = null
                 )
             }
 
@@ -386,7 +409,7 @@ class MapViewModel @Inject constructor(
     }
 
     /**
-     * Validate segment before saving - menggunakan ZAxisValidationHelper
+     * Validate segment before saving – menggunakan ZAxisValidationHelper
      */
     fun completeSegmentCreation(): ZAxisValidationResult {
         val points = _segmentCreationPoints.value
@@ -455,15 +478,6 @@ class MapViewModel @Inject constructor(
                 messages = listOf(validation.message),
                 confidence = Confidence.LOW
             )
-            // 🔴 BRANCH ELSE WAJIB – antisipasi subclass baru
-            else -> {
-                Timber.w("⚠️ Unknown ZAxisValidation type: ${validation::class.simpleName}")
-                ZAxisValidationResult(
-                    isValid = false,
-                    messages = listOf("Status validasi tidak dikenal"),
-                    confidence = Confidence.LOW
-                )
-            }
         }
     }
 
@@ -495,7 +509,6 @@ class MapViewModel @Inject constructor(
         val state = _uiState.value
         val sensorData = latestSensorData ?: return
 
-        // Calculate quality score
         val qualityScore = qualityScoreCalculator.calculateQualityScore(
             avgIRI = 0.0,
             dataPointCount = state.packetCount,
@@ -503,7 +516,6 @@ class MapViewModel @Inject constructor(
             hasOutliers = false
         ).toFloat() / 100f
 
-        // Build quality flags
         val flags = buildQualityFlags(sensorData, state.currentLocation)
 
         val segment = RoadSegment(
@@ -601,7 +613,7 @@ class MapViewModel @Inject constructor(
         val batteryVoltage: Float? = null,
         val temperature: Float? = null,
         val validationColor: String = "",
-        val zAxisValidation: ZAxisValidation? = null
+        val zAxisValidation: ZAxisValidation? = null // ✅ LIVE, bukan dead state
     )
 
     enum class DeviceReadyState {

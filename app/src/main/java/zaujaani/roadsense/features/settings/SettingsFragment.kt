@@ -1,12 +1,23 @@
 package zaujaani.roadsense.features.settings
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
+import timber.log.Timber
+import zaujaani.roadsense.R
 import zaujaani.roadsense.databinding.FragmentSettingsBinding
 
 @AndroidEntryPoint
@@ -27,26 +38,40 @@ class SettingsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        setupSettings()
-        setupObservers()
+
+        setupSettingsListeners()
+        observeViewModel()
     }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
 
-
-    private fun setupSettings() {
-        // GPS Settings
+    // ========== SETUP LISTENERS ==========
+    private fun setupSettingsListeners() {
+        // GPS Settings - Click untuk buka settings, switch untuk preferensi
         binding.switchGps.setOnCheckedChangeListener { _, isChecked ->
             viewModel.setGpsEnabled(isChecked)
+        }
+        binding.layoutGps.setOnClickListener {
+            viewModel.openGpsSettings()
         }
 
         // Bluetooth Settings
         binding.switchBluetooth.setOnCheckedChangeListener { _, isChecked ->
             viewModel.setBluetoothEnabled(isChecked)
         }
+        binding.layoutBluetooth.setOnClickListener {
+            viewModel.openBluetoothSettings()
+        }
 
         // Notification Settings
         binding.switchNotification.setOnCheckedChangeListener { _, isChecked ->
             viewModel.setNotificationsEnabled(isChecked)
+        }
+        binding.layoutNotification.setOnClickListener {
+            viewModel.openAppNotificationSettings()
         }
 
         // Auto Save Settings
@@ -66,28 +91,125 @@ class SettingsFragment : Fragment() {
 
         // Export Database
         binding.btnExportDatabase.setOnClickListener {
-            viewModel.exportDatabase()
+            exportDatabase()
         }
 
         // Clear Cache
         binding.btnClearCache.setOnClickListener {
-            viewModel.clearCache()
+            showClearCacheConfirmation()
+        }
+
+        // Reset to Defaults
+        binding.btnResetDefaults.setOnClickListener {
+            showResetConfirmation()
         }
     }
 
-    private fun setupObservers() {
-        viewModel.settingsState.observe(viewLifecycleOwner) { state ->
-            binding.switchGps.isChecked = state.isGpsEnabled
-            binding.switchBluetooth.isChecked = state.isBluetoothEnabled
-            binding.switchNotification.isChecked = state.areNotificationsEnabled
-            binding.switchAutoSave.isChecked = state.isAutoSaveEnabled
-            binding.switchVibration.isChecked = state.isVibrationDetectionEnabled
+    // ========== OBSERVE STATE FLOW ==========
+    private fun observeViewModel() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.settingsState.collect { state ->
+                    // Update switches (tanpa memicu listener berulang)
+                    binding.switchGps.apply {
+                        setOnCheckedChangeListener(null)
+                        isChecked = state.isGpsEnabled
+                        setOnCheckedChangeListener { _, isChecked -> viewModel.setGpsEnabled(isChecked) }
+                    }
+                    binding.switchBluetooth.apply {
+                        setOnCheckedChangeListener(null)
+                        isChecked = state.isBluetoothEnabled
+                        setOnCheckedChangeListener { _, isChecked -> viewModel.setBluetoothEnabled(isChecked) }
+                    }
+                    binding.switchNotification.apply {
+                        setOnCheckedChangeListener(null)
+                        isChecked = state.areNotificationsEnabled
+                        setOnCheckedChangeListener { _, isChecked -> viewModel.setNotificationsEnabled(isChecked) }
+                    }
+                    binding.switchAutoSave.apply {
+                        setOnCheckedChangeListener(null)
+                        isChecked = state.isAutoSaveEnabled
+                        setOnCheckedChangeListener { _, isChecked -> viewModel.setAutoSaveEnabled(isChecked) }
+                    }
+                    binding.switchVibration.apply {
+                        setOnCheckedChangeListener(null)
+                        isChecked = state.isVibrationDetectionEnabled
+                        setOnCheckedChangeListener { _, isChecked -> viewModel.setVibrationDetectionEnabled(isChecked) }
+                    }
+
+                    // Update info lainnya
+                    binding.tvAppVersion.text = "Version ${state.appVersion}"
+                    binding.tvDatabaseSize.text = state.databaseSize
+                }
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.isLoading.collect { isLoading ->
+                    binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+                }
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.snackbarMessage.collect { message ->
+                    message?.let {
+                        Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
+                        viewModel.clearSnackbar()
+                    }
+                }
+            }
         }
     }
 
+    // ========== EXPORT DATABASE ==========
+    private fun exportDatabase() {
+        viewModel.exportDatabase(
+            onSuccess = { uri ->
+                shareDatabase(uri)
+            }
+        )
+    }
+
+    private fun shareDatabase(uri: Uri) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/x-sqlite3"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        startActivity(Intent.createChooser(shareIntent, "Ekspor Database"))
+    }
+
+    // ========== CLEAR CACHE ==========
+    private fun showClearCacheConfirmation() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Bersihkan Cache")
+            .setMessage("Semua file cache akan dihapus. Lanjutkan?")
+            .setPositiveButton("Bersihkan") { _, _ ->
+                viewModel.clearCache()
+            }
+            .setNegativeButton("Batal", null)
+            .show()
+    }
+
+    // ========== RESET TO DEFAULTS ==========
+    private fun showResetConfirmation() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Reset Pengaturan")
+            .setMessage("Semua pengaturan akan dikembalikan ke default. Lanjutkan?")
+            .setPositiveButton("Reset") { _, _ ->
+                viewModel.resetToDefaults()
+            }
+            .setNegativeButton("Batal", null)
+            .show()
+    }
+
+    // ========== ABOUT DIALOG ==========
     private fun showAboutDialog() {
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
-            .setTitle("RoadSense v1.0")
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("RoadSense v${viewModel.settingsState.value.appVersion}")
             .setMessage(
                 """
                 RoadSense - Professional Road Survey Logger
@@ -106,10 +228,5 @@ class SettingsFragment : Fragment() {
             )
             .setPositiveButton("OK", null)
             .show()
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
     }
 }
