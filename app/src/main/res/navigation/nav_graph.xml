@@ -20,6 +20,9 @@
         <action
             android:id="@+id/action_mapSurvey_to_settings"
             app:destination="@id/settingsFragment" />
+        <action
+            android:id="@+id/action_mapSurveyFragment_to_offlineMapsFragment"
+            app:destination="@id/offlineMapsFragment" />
     </fragment>
 
     <fragment
@@ -64,6 +67,15 @@
             app:destination="@id/mapSurveyFragment"
             app:popUpTo="@id/mapSurveyFragment"
             app:popUpToInclusive="false" />
+    </fragment>
+    <fragment
+        android:id="@+id/offlineMapsFragment"
+        android:name="zaujaani.roadsense.features.offlinemaps.OfflineMapsFragment"
+        android:label="Offline Maps"
+        tools:layout="@layout/fragment_offline_maps" >
+        <action
+            android:id="@+id/action_offlineMapsFragment_to_mapSurveyFragment"
+            app:destination="@id/mapSurveyFragment" />
     </fragment>
 
 </navigation>

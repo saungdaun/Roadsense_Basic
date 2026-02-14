@@ -3,10 +3,9 @@ package zaujaani.roadsense.features.map
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
 import androidx.core.content.ContextCompat
+import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
@@ -35,6 +34,9 @@ class MapSurveyFragment : Fragment() {
     private lateinit var uiStateBinder: UIStateBinder
     private lateinit var surveyController: SurveyController
 
+    // Untuk menghindari refresh berulang pada pesan download yang sama
+    private var lastDownloadMessage: String? = null
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -47,6 +49,26 @@ class MapSurveyFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Setup MenuProvider (menggantikan setHasOptionsMenu + onCreateOptionsMenu)
+        requireActivity().addMenuProvider(object : MenuProvider {
+            override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+                menuInflater.inflate(R.menu.map_survey_menu, menu)
+            }
+
+            override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+                return when (menuItem.itemId) {
+                    R.id.action_download_maps -> {
+                        val bounds = binding.mapView.boundingBox
+                        viewModel.downloadMapArea(requireContext(), bounds, 12..18)
+                        Snackbar.make(binding.root, R.string.download_started, Snackbar.LENGTH_SHORT).show()
+                        true
+                    }
+                    else -> false
+                }
+            }
+        }, viewLifecycleOwner)
+
+        // Inisialisasi map
         val mapInitResult = MapInitializer.initializeMap(requireContext(), binding.mapView)
 
         mapOverlayManager = MapOverlayManager(
@@ -72,6 +94,9 @@ class MapSurveyFragment : Fragment() {
             surveyController.handleMapTapForSegment(geoPoint)
         }
         mapOverlayManager.setupMapTapOverlay()
+
+        // Aktifkan mode offline pada map (akan memuat tile yang sudah ada)
+        viewModel.enableOfflineMode(binding.mapView)
 
         setupObservers()
         setupClickListeners()
@@ -116,6 +141,30 @@ class MapSurveyFragment : Fragment() {
 
                             state.currentLocation?.let { location ->
                                 mapOverlayManager.updateCurrentLocation(location)
+                            }
+
+                            // Tampilkan pesan download dan refresh map jika selesai
+                            state.downloadMessage?.let { message ->
+                                if (message != lastDownloadMessage) {
+                                    lastDownloadMessage = message
+                                    Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+
+                                    // Jika pesan menandakan download sukses, refresh peta agar tile baru tampil
+                                    if (message.contains("Selesai", ignoreCase = true) ||
+                                        message.contains("sukses", ignoreCase = true)) {
+                                        Timber.d("Download completed, refreshing map tiles")
+                                        // Aktifkan ulang offline mode untuk memuat tile baru
+                                        viewModel.enableOfflineMode(binding.mapView)
+                                        // Paksa invalidate untuk refresh tampilan
+                                        binding.mapView.invalidate()
+                                        // Opsional: ubah zoom sedikit untuk memicu reload
+                                        binding.mapView.postDelayed({
+                                            val currentZoom = binding.mapView.zoomLevelDouble
+                                            binding.mapView.controller.setZoom(currentZoom - 0.01)
+                                            binding.mapView.controller.setZoom(currentZoom)
+                                        }, 100)
+                                    }
+                                }
                             }
                         }
                     }
@@ -197,13 +246,9 @@ class MapSurveyFragment : Fragment() {
         val allGranted = permissions.all { it.value }
         if (allGranted) {
             Timber.d("✅ Location permissions granted")
-            if (_binding != null) {
-                Snackbar.make(binding.root, getString(R.string.gps_ready), Snackbar.LENGTH_SHORT).show()
-            }
+            Snackbar.make(binding.root, getString(R.string.gps_ready), Snackbar.LENGTH_SHORT).show()
         } else {
-            if (_binding != null) {
-                Snackbar.make(binding.root, getString(R.string.survey_without_gps), Snackbar.LENGTH_LONG).show()
-            }
+            Snackbar.make(binding.root, getString(R.string.survey_without_gps), Snackbar.LENGTH_LONG).show()
         }
     }
 

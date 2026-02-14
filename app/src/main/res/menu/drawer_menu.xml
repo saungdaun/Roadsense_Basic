@@ -23,12 +23,17 @@
             android:icon="@drawable/ic_settings"
             android:title="Settings" />
 
+        <!-- ITEM BARU: Offline Maps -->
+        <item
+            android:id="@+id/offlineMapsFragment"
+            android:icon="@drawable/ic_map"
+            android:title="@string/offline_maps" />
+
         <!-- Menu tanpa destination di nav_graph, handle manual -->
         <item
             android:id="@+id/nav_help"
             android:icon="@drawable/ic_help"
             android:title="Help" />
-
 
     </group>
 

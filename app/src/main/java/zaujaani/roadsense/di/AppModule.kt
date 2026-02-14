@@ -10,7 +10,9 @@ import zaujaani.roadsense.core.bluetooth.BluetoothGateway
 import zaujaani.roadsense.core.events.RealtimeRoadsenseBus
 import zaujaani.roadsense.core.gps.GPSFusionEngine
 import zaujaani.roadsense.core.gps.GPSGateway
+import zaujaani.roadsense.core.maps.OfflineMapManager
 import zaujaani.roadsense.core.sensor.SensorGateway
+
 import zaujaani.roadsense.data.local.*
 import zaujaani.roadsense.data.repository.*
 import zaujaani.roadsense.domain.engine.QualityScoreCalculator
@@ -106,4 +108,11 @@ object AppModule {
     @Singleton
     fun provideQualityScoreCalculator(): QualityScoreCalculator =
         QualityScoreCalculator()
+
+    // ----- OFFLINE MAP MANAGER -----
+    @Provides
+    @Singleton
+    fun provideOfflineMapManager(
+        @ApplicationContext context: Context
+    ): OfflineMapManager = OfflineMapManager(context)
 }

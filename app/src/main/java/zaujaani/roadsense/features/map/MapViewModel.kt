@@ -1,16 +1,21 @@
 package zaujaani.roadsense.features.map
 
+import android.content.Context
 import android.location.Location
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
 import timber.log.Timber
 import zaujaani.roadsense.core.bluetooth.BluetoothGateway
+import zaujaani.roadsense.core.constants.SurveyConstants
 import zaujaani.roadsense.core.events.RealtimeRoadsenseBus
 import zaujaani.roadsense.core.gps.GPSGateway
+import zaujaani.roadsense.core.maps.OfflineMapManager
 import zaujaani.roadsense.data.local.*
 import zaujaani.roadsense.data.repository.SurveyRepository
 import zaujaani.roadsense.data.repository.TelemetryRepository
@@ -21,26 +26,6 @@ import zaujaani.roadsense.domain.usecase.ZAxisValidation
 import zaujaani.roadsense.domain.usecase.ZAxisValidationHelper
 import javax.inject.Inject
 
-/**
- * MapViewModel - Main survey screen state management
- *
- * PRINCIPLES:
- * ✅ Sensor is PRIMARY distance source (from ESP32)
- * ✅ GPS is POSITION REFERENCE only
- * ✅ Never stop survey on GPS drop
- * ✅ Clean separation: UI State vs Business Logic
- * ✅ All data saved with quality flags for audit trail
- *
- * FIX RACE CONDITION:
- * ✅ Reset readiness di SurveyEngine.startSurvey()
- * ✅ Tunggu isReady == true sebelum mengirim CMD:START
- *
- * FIX FLOW LEAK:
- * ✅ flatMapLatest untuk telemetry points collector
- *
- * FIX DEAD STATE:
- * ✅ zAxisValidation di MapUiState selalu di-update
- */
 @HiltViewModel
 class MapViewModel @Inject constructor(
     private val surveyEngine: SurveyEngine,
@@ -49,7 +34,8 @@ class MapViewModel @Inject constructor(
     private val surveyRepository: SurveyRepository,
     private val telemetryRepository: TelemetryRepository,
     private val qualityScoreCalculator: QualityScoreCalculator,
-    private val zAxisValidationHelper: ZAxisValidationHelper
+    private val zAxisValidationHelper: ZAxisValidationHelper,
+    private val offlineMapManager: OfflineMapManager
 ) : ViewModel() {
 
     // ========== UI STATE ==========
@@ -75,29 +61,22 @@ class MapViewModel @Inject constructor(
     private var latestSensorData: ESP32SensorData? = null
     private var latestZAxisValidation: ZAxisValidation? = null
 
-    // ========== INITIALIZATION ==========
     init {
-        Timber.d("🎯 MapViewModel initialized")
         observeBus()
         observeSurveyState()
         observeBluetooth()
-        observeTrackingPoints() // ✅ single collector with flatMapLatest
+        observeTrackingPoints()
         loadSavedSegments()
         checkDeviceReadyState()
     }
 
     // ========== OBSERVERS ==========
-
-    /**
-     * Subscribe ke RealtimeRoadsenseBus untuk update sensor & GPS
-     */
     private fun observeBus() {
         viewModelScope.launch {
             bus.sensorData
                 .filterNotNull()
                 .collect { sensorData ->
                     latestSensorData = sensorData
-
                     val validation = zAxisValidationHelper.validate(
                         accelZ = sensorData.accelZ,
                         speed = sensorData.currentSpeed
@@ -113,7 +92,6 @@ class MapViewModel @Inject constructor(
                         else -> Confidence.LOW
                     }
 
-                    // ✅ Update UI state dengan validation object
                     _uiState.update {
                         it.copy(
                             currentSpeed = sensorData.currentSpeed,
@@ -124,11 +102,9 @@ class MapViewModel @Inject constructor(
                             temperature = sensorData.temperature,
                             zAxisConfidence = confidence,
                             validationColor = validation.color.name,
-                            zAxisValidation = validation // 🔥 FIX: dead state dihilangkan
+                            zAxisValidation = validation
                         )
                     }
-
-                    Timber.v("📊 Sensor: ${sensorData.tripDistanceMeters}m, ${sensorData.currentSpeed}km/h, Z=${sensorData.accelZ}, Validation=${validation::class.simpleName}")
                 }
         }
 
@@ -137,14 +113,14 @@ class MapViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         currentLocation = location,
-                        gpsAccuracy = location?.accuracy?.let { acc -> "±${acc.toInt()}m" } ?: "No GPS"
+                        gpsAccuracy = location?.accuracy?.let { "±${it.toInt()}m" } ?: "No GPS"
                     )
                 }
 
                 val strength = when {
                     location == null -> SignalStrength.NONE
                     location.accuracy < 10f -> SignalStrength.EXCELLENT
-                    location.accuracy < 20f -> SignalStrength.GOOD
+                    location.accuracy < SurveyConstants.GPS_GOOD_ACCURACY_METERS -> SignalStrength.GOOD
                     location.accuracy < 50f -> SignalStrength.FAIR
                     else -> SignalStrength.POOR
                 }
@@ -153,9 +129,6 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Monitor survey state dari bus
-     */
     private fun observeSurveyState() {
         viewModelScope.launch {
             bus.surveyState.collect { state ->
@@ -167,28 +140,21 @@ class MapViewModel @Inject constructor(
                 }
 
                 when (state) {
-                    is SurveyEngine.SurveyState.Running -> {
-                        currentSessionId = state.surveyId
-                        // tracking points sekarang di-handle oleh observeTrackingPoints()
-                    }
+                    is SurveyEngine.SurveyState.Running -> currentSessionId = state.surveyId
                     is SurveyEngine.SurveyState.Stopped -> {
                         currentSessionId = -1L
                         _trackingPoints.value = emptyList()
                         latestSensorData = null
                         latestZAxisValidation = null
                         zAxisValidationHelper.reset()
-                        // ✅ Reset juga validation di UI state
                         _uiState.update { it.copy(zAxisValidation = null) }
                     }
-                    else -> { /* Paused or Idle - keep session ID */ }
+                    else -> { /* Paused or Idle */ }
                 }
             }
         }
     }
 
-    /**
-     * Monitor Bluetooth connection status
-     */
     private fun observeBluetooth() {
         viewModelScope.launch {
             bluetoothGateway.connectionState.collect { state ->
@@ -199,11 +165,6 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    /**
-     * ✅ ANTI-LEAK TELEMETRY POINTS COLLECTOR
-     * Menggunakan flatMapLatest untuk menghindari multiple collectors.
-     * Hanya satu collector seumur hidup ViewModel.
-     */
     private fun observeTrackingPoints() {
         viewModelScope.launch {
             bus.surveyState
@@ -223,9 +184,6 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Load saved road segments for map display
-     */
     private fun loadSavedSegments() {
         viewModelScope.launch {
             try {
@@ -239,21 +197,14 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    // ========== PUBLIC API FOR FRAGMENT ==========
-
-    /**
-     * Check if device is ready to start survey
-     */
+    // ========== PUBLIC API ==========
     fun checkDeviceReadyState() {
-        viewModelScope.launch {
-            updateDeviceReadyState()
-        }
+        viewModelScope.launch { updateDeviceReadyState() }
     }
 
     private suspend fun updateDeviceReadyState() {
         val connected = bluetoothGateway.isConnected()
         val hasCalib = surveyRepository.hasCalibration()
-
         _deviceReadyState.value = when {
             !connected -> DeviceReadyState.NOT_CONNECTED
             !hasCalib -> DeviceReadyState.CALIBRATION_NEEDED
@@ -261,11 +212,6 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Start survey session – FIX RACE CONDITION (final)
-     * - Reset readiness sudah di dalam SurveyEngine.startSurvey()
-     * - Tunggu isReady == true baru kirim perintah hardware
-     */
     suspend fun startSurvey(): SurveyStartResult {
         return try {
             if (_deviceReadyState.value != DeviceReadyState.READY) {
@@ -274,7 +220,6 @@ class MapViewModel @Inject constructor(
 
             val sessionIdStr = surveyEngine.generateSessionId()
             val calibration = surveyRepository.getActiveCalibration()
-
             val session = SurveySession(
                 surveyorName = "User",
                 startTime = System.currentTimeMillis(),
@@ -282,52 +227,34 @@ class MapViewModel @Inject constructor(
                 calibrationId = calibration?.id,
                 notes = "Session: $sessionIdStr"
             )
-
             val newSessionId = surveyRepository.createSurveySession(session)
             currentSessionId = newSessionId
 
-            // 1️⃣ Mulai engine (suspend, akan reset isReady = false, lalu inisialisasi, lalu true)
             surveyEngine.startSurvey(sessionIdStr, newSessionId)
-
-            // 2️⃣ ⏳ Tunggu sampai engine benar-benar ready
             surveyEngine.isReady.first { it }
 
-            // 3️⃣ Kirim perintah ke hardware (ESP32)
             bluetoothGateway.sendCommand("CMD:START")
-
-            // Reset Z-Axis validation history untuk survey baru
             zAxisValidationHelper.reset()
 
             Timber.i("✅ Survey started: Session ID = $newSessionId")
             SurveyStartResult.SUCCESS
-
         } catch (e: Exception) {
             Timber.e(e, "❌ Failed to start survey")
             SurveyStartResult.ERROR(e.message ?: "Unknown error")
         }
     }
 
-    /**
-     * Stop survey session
-     */
     suspend fun stopSurvey() {
         try {
             surveyEngine.stopSurvey()
             bluetoothGateway.sendCommand("CMD:STOP")
-
             if (currentSessionId != -1L) {
-                surveyRepository.updateSurveySessionStatus(
-                    currentSessionId,
-                    "COMPLETED",
-                    System.currentTimeMillis()
-                )
+                surveyRepository.updateSurveySessionStatus(currentSessionId, "COMPLETED", System.currentTimeMillis())
             }
-
             currentSessionId = -1L
             latestSensorData = null
             latestZAxisValidation = null
             _trackingPoints.value = emptyList()
-
             _uiState.update {
                 it.copy(
                     isTracking = false,
@@ -342,17 +269,12 @@ class MapViewModel @Inject constructor(
                     zAxisValidation = null
                 )
             }
-
             Timber.i("✅ Survey stopped")
-
         } catch (e: Exception) {
             Timber.e(e, "Error stopping survey")
         }
     }
 
-    /**
-     * Pause survey
-     */
     fun pauseSurvey() {
         surveyEngine.pauseSurvey()
         viewModelScope.launch {
@@ -363,9 +285,6 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Resume survey
-     */
     fun resumeSurvey() {
         surveyEngine.resumeSurvey()
         viewModelScope.launch {
@@ -376,30 +295,70 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    // ========== SEGMENT CREATION ==========
+    // ========== OFFLINE MAPS ==========
+    fun downloadMapArea(context: Context, boundingBox: BoundingBox, zoomLevels: IntRange) {
+        offlineMapManager.downloadMapArea(
+            activityContext = context,
+            boundingBox = boundingBox,
+            zoomLevels = zoomLevels,
+            coroutineScope = viewModelScope,
+            onResult = { result ->
+                result.onSuccess { count ->
+                    _uiState.update { it.copy(downloadProgress = null, downloadMessage = "Download selesai: $count tiles") }
+                    Timber.i("Download sukses: $count tiles")
+                }.onFailure { error ->
+                    _uiState.update { it.copy(downloadProgress = null, downloadMessage = "Gagal: ${error.message}") }
+                    Timber.e(error, "Download gagal")
+                }
+            }
+        )
 
-    /**
-     * Start creating a road segment
-     */
-    fun startSegmentCreation(): Boolean {
-        if (!surveyEngine.isRunning() || surveyEngine.isPaused()) {
-            return false
+        // Update progress via observing downloadState dari manager (bisa juga dilakukan)
+        viewModelScope.launch {
+            offlineMapManager.downloadState.collect { state ->
+                when (state) {
+                    is OfflineMapManager.DownloadState.Downloading -> {
+                        _uiState.update {
+                            it.copy(
+                                downloadProgress = state.progress,
+                                downloadMessage = "${state.current}/${state.total} tiles"
+                            )
+                        }
+                    }
+                    is OfflineMapManager.DownloadState.Preparing -> {
+                        _uiState.update { it.copy(downloadProgress = 0f, downloadMessage = state.message) }
+                    }
+                    is OfflineMapManager.DownloadState.Error -> {
+                        _uiState.update { it.copy(downloadProgress = null, downloadMessage = "Error: ${state.message}") }
+                    }
+                    is OfflineMapManager.DownloadState.Completed -> {
+                        _uiState.update { it.copy(downloadProgress = null, downloadMessage = "Selesai!") }
+                    }
+                    is OfflineMapManager.DownloadState.Cancelled -> {
+                        _uiState.update { it.copy(downloadProgress = null, downloadMessage = "Dibatalkan") }
+                    }
+                    else -> {}
+                }
+            }
         }
+    }
+
+    fun enableOfflineMode(mapView: MapView) {
+        offlineMapManager.enableOfflineMode(mapView)
+    }
+
+    // ========== SEGMENT CREATION ==========
+    fun startSegmentCreation(): Boolean {
+        if (!surveyEngine.isRunning() || surveyEngine.isPaused()) return false
         _uiState.update { it.copy(isCreatingSegment = true) }
         _segmentCreationPoints.value = emptyList()
         return true
     }
 
-    /**
-     * Set segment start point
-     */
     fun setSegmentStartPoint(point: GeoPoint) {
         _segmentCreationPoints.value = listOf(point)
     }
 
-    /**
-     * Set segment end point
-     */
     fun setSegmentEndPoint(point: GeoPoint) {
         val current = _segmentCreationPoints.value.toMutableList()
         if (current.isNotEmpty()) {
@@ -408,9 +367,6 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Validate segment before saving – menggunakan ZAxisValidationHelper
-     */
     fun completeSegmentCreation(): ZAxisValidationResult {
         val points = _segmentCreationPoints.value
         if (points.size != 2) {
@@ -439,59 +395,39 @@ class MapViewModel @Inject constructor(
                 }
 
                 val messages = mutableListOf<String>()
-                if (sensorData?.currentSpeed ?: 0f >= 20f) {
-                    messages.add("⚠️ Kecepatan > 20 km/h (rekomendasi < 20)")
-                }
-                if (state.currentLocation?.accuracy ?: 999f >= 5f) {
-                    messages.add("⚠️ Akurasi GPS > 5m (rekomendasi < 5m)")
-                }
-                if (kotlin.math.abs(sensorData?.accelZ ?: 0f) > 1.5f) {
-                    messages.add("⚠️ Getaran tinggi terdeteksi")
-                }
-                if (state.currentLocation == null) {
-                    messages.add("⚠️ GPS tidak tersedia")
-                }
+                if (sensorData?.currentSpeed ?: 0f >= 20f) messages.add("⚠️ Kecepatan > 20 km/h")
+                if (state.currentLocation?.accuracy ?: 999f >= 5f) messages.add("⚠️ Akurasi GPS > 5m")
+                if (kotlin.math.abs(sensorData?.accelZ ?: 0f) > 1.5f) messages.add("⚠️ Getaran tinggi")
+                if (state.currentLocation == null) messages.add("⚠️ GPS tidak tersedia")
 
+                ZAxisValidationResult(isValid = true, messages = messages, confidence = confidence)
+            }
+            is ZAxisValidation.WarningStopped,
+            is ZAxisValidation.InvalidShake,
+            is ZAxisValidation.InvalidNoMovement,
+            is ZAxisValidation.SuspiciousPattern -> {
+                // Buat pesan error berdasarkan tipe validation
+                val errorMessage = when (validation) {
+                    is ZAxisValidation.WarningStopped -> validation.message ?: "Kendaraan berhenti"
+                    is ZAxisValidation.InvalidShake -> validation.message ?: "Getaran tidak valid"
+                    is ZAxisValidation.InvalidNoMovement -> validation.message ?: "Tidak ada pergerakan"
+                    is ZAxisValidation.SuspiciousPattern -> validation.message ?: "Pola getaran mencurigakan"
+                    else -> "Error tidak dikenal"
+                }
                 ZAxisValidationResult(
-                    isValid = true,
-                    messages = messages,
-                    confidence = confidence
+                    isValid = false,
+                    messages = listOf(errorMessage),
+                    confidence = Confidence.LOW
                 )
             }
-            is ZAxisValidation.WarningStopped -> ZAxisValidationResult(
-                isValid = false,
-                messages = listOf(validation.message),
-                confidence = Confidence.LOW
-            )
-            is ZAxisValidation.InvalidShake -> ZAxisValidationResult(
-                isValid = false,
-                messages = listOf(validation.message),
-                confidence = Confidence.LOW
-            )
-            is ZAxisValidation.InvalidNoMovement -> ZAxisValidationResult(
-                isValid = false,
-                messages = listOf(validation.message),
-                confidence = Confidence.LOW
-            )
-            is ZAxisValidation.SuspiciousPattern -> ZAxisValidationResult(
-                isValid = false,
-                messages = listOf(validation.message),
-                confidence = Confidence.LOW
-            )
         }
     }
 
-    /**
-     * Cancel segment creation
-     */
     fun cancelSegmentCreation() {
         _uiState.update { it.copy(isCreatingSegment = false) }
         _segmentCreationPoints.value = emptyList()
     }
 
-    /**
-     * Save road segment to database
-     */
     suspend fun saveSegment(
         roadName: String,
         conditionCode: String,
@@ -499,10 +435,7 @@ class MapViewModel @Inject constructor(
         notes: String?
     ) {
         val points = _segmentCreationPoints.value
-        if (points.size != 2) {
-            Timber.w("Cannot save segment: need 2 points")
-            return
-        }
+        if (points.size != 2) return
 
         val start = points[0]
         val end = points[1]
@@ -546,44 +479,21 @@ class MapViewModel @Inject constructor(
         surveyRepository.insertRoadSegment(segment)
         cancelSegmentCreation()
         loadSavedSegments()
-
         Timber.i("✅ Segment saved: $roadName, ${segment.distanceMeters}m")
     }
 
-    /**
-     * Build quality flags for segment
-     */
     private fun buildQualityFlags(sensorData: ESP32SensorData, location: Location?): List<String> {
         val flags = mutableListOf<String>()
-
-        if (location == null) {
-            flags.add(QualityFlag.GPS_UNAVAILABLE.name)
-        }
-
-        if (sensorData.currentSpeed > 20f) {
-            flags.add(QualityFlag.SPEED_TOO_HIGH.name)
-        }
-
-        if (kotlin.math.abs(sensorData.accelZ) > 1.5f) {
-            flags.add(QualityFlag.VIBRATION_SPIKE.name)
-        }
-
-        if (_uiState.value.zAxisConfidence == Confidence.HIGH) {
-            flags.add(QualityFlag.HIGH_CONFIDENCE.name)
-        }
-
+        if (location == null) flags.add(QualityFlag.GPS_UNAVAILABLE.name)
+        if (sensorData.currentSpeed > 20f) flags.add(QualityFlag.SPEED_TOO_HIGH.name)
+        if (kotlin.math.abs(sensorData.accelZ) > 1.5f) flags.add(QualityFlag.VIBRATION_SPIKE.name)
+        if (_uiState.value.zAxisConfidence == Confidence.HIGH) flags.add(QualityFlag.HIGH_CONFIDENCE.name)
         sensorData.batteryVoltage?.let { voltage ->
-            if (voltage < 3.6f) {
-                flags.add("BATTERY_WARNING")
-            }
+            if (voltage < SurveyConstants.BATTERY_LOW_VOLTAGE) flags.add("BATTERY_WARNING")
         }
-
         return flags
     }
 
-    /**
-     * Calculate severity based on condition and distance
-     */
     private fun calculateSeverity(conditionCode: String, distance: Float): Int {
         return when (conditionCode) {
             RoadCondition.GOOD.code -> 1
@@ -595,7 +505,6 @@ class MapViewModel @Inject constructor(
     }
 
     // ========== DATA CLASSES ==========
-
     data class MapUiState(
         val isTracking: Boolean = false,
         val isPaused: Boolean = false,
@@ -613,31 +522,21 @@ class MapViewModel @Inject constructor(
         val batteryVoltage: Float? = null,
         val temperature: Float? = null,
         val validationColor: String = "",
-        val zAxisValidation: ZAxisValidation? = null // ✅ LIVE, bukan dead state
+        val zAxisValidation: ZAxisValidation? = null,
+        // Untuk download progress
+        val downloadProgress: Float? = null,
+        val downloadMessage: String? = null
     )
 
     enum class DeviceReadyState {
-        READY,
-        NOT_CONNECTED,
-        CALIBRATION_NEEDED,
-        GPS_DISABLED,
-        BLUETOOTH_DISABLED
+        READY, NOT_CONNECTED, CALIBRATION_NEEDED, GPS_DISABLED, BLUETOOTH_DISABLED
     }
 
-    enum class SignalStrength {
-        NONE,
-        SEARCHING,
-        POOR,
-        FAIR,
-        GOOD,
-        EXCELLENT
-    }
-
+    enum class SignalStrength { NONE, SEARCHING, POOR, FAIR, GOOD, EXCELLENT }
     sealed class SurveyStartResult {
         object SUCCESS : SurveyStartResult()
         data class ERROR(val message: String) : SurveyStartResult()
     }
-
     data class ZAxisValidationResult(
         val isValid: Boolean,
         val messages: List<String>,

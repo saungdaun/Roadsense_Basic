@@ -8,7 +8,7 @@
     android:background="@color/background"
     tools:context=".features.map.MapSurveyFragment">
 
-    <!-- Map View (OSM) -->
+    <!-- Map View (OSM) - tetap full screen -->
     <org.osmdroid.views.MapView
         android:id="@+id/mapView"
         android:layout_width="0dp"
@@ -16,15 +16,15 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:ignore="MissingConstraints" />
+        app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- ===== STATUS PANEL ATAS ===== -->
+    <!-- ===== STATUS PANEL ATAS (full width) ===== -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/statusCard"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_margin="@dimen/spacing_medium"
+        android:elevation="4dp"
         app:cardBackgroundColor="@color/surface_container"
         app:cardCornerRadius="@dimen/status_panel_corner_radius"
         app:cardElevation="@dimen/elevation_small"
@@ -153,7 +153,9 @@
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- ===== Z-AXIS INDICATOR (COMPOUND DRAWABLE) ===== -->
+
+
+    <!-- ===== Z-AXIS INDICATOR ===== -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/zAxisCard"
         android:layout_width="wrap_content"
@@ -170,22 +172,20 @@
             android:orientation="vertical"
             android:padding="@dimen/spacing_small">
 
-            <!-- ✅ TextView dengan compound drawable (lingkaran) – warna diatur via kode -->
             <TextView
                 android:id="@+id/tvZAxisStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:drawableStart="@drawable/circle_indicator"
                 android:drawablePadding="@dimen/spacing_small"
                 android:text="@string/vibration_default"
                 android:textColor="@color/gray_900"
                 android:textSize="@dimen/text_small"
                 android:textStyle="bold"
                 android:gravity="center_vertical"
+                app:drawableStartCompat="@drawable/circle_indicator"
                 tools:drawableTint="@color/good_green"
                 tools:text="✅ Valid - Siap merekam" />
 
-            <!-- ✅ Confidence message / warning -->
             <TextView
                 android:id="@+id/tvZAxisMessage"
                 android:layout_width="wrap_content"
@@ -213,6 +213,7 @@
         android:textSize="@dimen/text_small"
         android:textStyle="bold"
         android:visibility="gone"
+        android:elevation="8dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         tools:visibility="visible"

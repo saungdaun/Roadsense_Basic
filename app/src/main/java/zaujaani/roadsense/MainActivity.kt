@@ -101,7 +101,8 @@ class MainActivity : AppCompatActivity() {
                 R.id.mapSurveyFragment,
                 R.id.summaryFragment,
                 R.id.calibrationFragment,
-                R.id.settingsFragment
+                R.id.settingsFragment,
+                R.id.offlineMapsFragment   // <-- TAMBAHKAN INI
             ),
             binding.drawerLayout
         )
