@@ -3,7 +3,6 @@ package zaujaani.roadsense.core.bluetooth
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flow
 import timber.log.Timber
 import zaujaani.roadsense.core.constants.SurveyConstants
 import java.util.concurrent.atomic.AtomicInteger

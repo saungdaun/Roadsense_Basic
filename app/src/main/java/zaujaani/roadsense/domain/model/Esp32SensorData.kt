@@ -111,6 +111,19 @@ data class ESP32SensorData(
     }
 
     /**
+     * Mendapatkan timestamp dalam milliseconds dari string ISO firmware
+     */
+    fun getTimestampMillis(): Long {
+        return try {
+            val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
+            sdf.timeZone = TimeZone.getTimeZone("UTC")
+            sdf.parse(timestamp)?.time ?: parsedAt
+        } catch (e: Exception) {
+            parsedAt
+        }
+    }
+
+    /**
      * Calculate data quality score (0.0 - 1.0)
      * Based on speed validity and Z-axis reasonableness
      */

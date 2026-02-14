@@ -1,5 +1,7 @@
 package zaujaani.roadsense.domain.model
 
+import zaujaani.roadsense.core.constants.SurveyConstants
+
 enum class Confidence(val displayName: String) {
     HIGH("Tinggi"),
     MEDIUM("Sedang"),
@@ -8,13 +10,13 @@ enum class Confidence(val displayName: String) {
     companion object {
         fun calculate(speed: Float, accuracy: Float, vibration: Float): Confidence {
             // Validation based on requirements:
-            // ✅ Speed < 20 km/h
-            // ✅ Accuracy < 5 meter
-            // ✅ Vibration spike > 1.5g
+            // ✅ Speed < 20 km/h (CONFIDENCE_SPEED_THRESHOLD_KMH)
+            // ✅ Accuracy < 5 meter (CONFIDENCE_ACCURACY_THRESHOLD_M)
+            // ✅ Vibration spike > 1.5g (CONFIDENCE_VIBRATION_THRESHOLD)
 
-            val speedValid = speed < 20f
-            val accuracyValid = accuracy < 5f
-            val vibrationValid = vibration > 1.5f
+            val speedValid = speed < SurveyConstants.CONFIDENCE_SPEED_THRESHOLD_KMH
+            val accuracyValid = accuracy < SurveyConstants.CONFIDENCE_ACCURACY_THRESHOLD_M
+            val vibrationValid = vibration > SurveyConstants.CONFIDENCE_VIBRATION_THRESHOLD
 
             // Beri skor berdasarkan kombinasi
             val score = when {

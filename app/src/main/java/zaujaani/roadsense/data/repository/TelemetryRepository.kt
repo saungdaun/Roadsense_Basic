@@ -31,6 +31,5 @@ class TelemetryRepository @Inject constructor(
     suspend fun deleteBySession(sessionId: Long) =
         telemetryDao.deleteBySession(sessionId)
 
-    // ========== LEGACY DIHAPUS ==========
-    // Semua fungsi yang mengacu ke TelemetryEntity sudah dihapus
+
 }

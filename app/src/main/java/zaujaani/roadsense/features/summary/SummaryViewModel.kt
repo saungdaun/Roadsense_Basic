@@ -7,30 +7,28 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import zaujaani.roadsense.data.local.RoadSegmentSummary
-import zaujaani.roadsense.data.repository.SurveyRepository
+import zaujaani.roadsense.data.repository.ImprovedSurveyRepository
 import javax.inject.Inject
 
 @HiltViewModel
 class SummaryViewModel @Inject constructor(
-    private val repository: SurveyRepository
+    private val repository: ImprovedSurveyRepository
 ) : ViewModel() {
 
     private val _summaryData = MutableStateFlow<List<RoadSegmentSummary>>(emptyList())
-    @Suppress("Unused")
-    val summaryData: StateFlow<List<RoadSegmentSummary>> = _summaryData
+    val summaryData: StateFlow<List<RoadSegmentSummary>> = _summaryData.asStateFlow()
 
     private val _filteredData = MutableStateFlow<List<RoadSegmentSummary>>(emptyList())
-    val filteredData: StateFlow<List<RoadSegmentSummary>> = _filteredData
+    val filteredData: StateFlow<List<RoadSegmentSummary>> = _filteredData.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error
+    val error: StateFlow<String?> = _error.asStateFlow()
 
     private val _selectedSessionId = MutableStateFlow<Long>(-1L)
-    @Suppress("Unused")
-    val selectedSessionId: StateFlow<Long> = _selectedSessionId
+    val selectedSessionId: StateFlow<Long> = _selectedSessionId.asStateFlow()
 
     private val _filterCondition = MutableStateFlow<String?>(null)
     private val _filterSurface = MutableStateFlow<String?>(null)
@@ -82,9 +80,9 @@ class SummaryViewModel @Inject constructor(
         }
     }
 
-    // 🔥 FIX: Gunakan firstOrNull() untuk menghindari blocking
     private suspend fun getAllSessionsSegments(): List<RoadSegmentSummary> {
         val allSegments = mutableListOf<RoadSegmentSummary>()
+        // getAllSessions() mengembalikan Flow, kita ambil first()
         val sessions = repository.getAllSessions().firstOrNull() ?: emptyList()
         sessions.forEach { session ->
             try {
@@ -98,9 +96,15 @@ class SummaryViewModel @Inject constructor(
         return allSegments.sortedByDescending { it.segment.timestamp }
     }
 
-    // 🔥 NEW: Hapus segmen
     suspend fun deleteSegment(segmentId: Long) {
-        repository.deleteRoadSegment(segmentId)
+        try {
+            repository.deleteRoadSegment(segmentId)
+            // setelah hapus, refresh data
+            loadSummary(_selectedSessionId.value)
+        } catch (e: Exception) {
+            _error.value = "Gagal menghapus segmen: ${e.message}"
+            Timber.e(e, "Delete segment failed")
+        }
     }
 
     fun setFilterCondition(condition: String?) {

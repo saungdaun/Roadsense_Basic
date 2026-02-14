@@ -46,7 +46,7 @@
 
     <style name="Theme.Roadsense.Splash" parent="Theme.SplashScreen">
         <!-- Warna latar belakang splash -->
-        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenBackground">@color/black</item>
 
         <!-- Ikon animasi di tengah (bisa vector drawable) -->
         <item name="windowSplashScreenAnimatedIcon">@drawable/splash_ok</item>

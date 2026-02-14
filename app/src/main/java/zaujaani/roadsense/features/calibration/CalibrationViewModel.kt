@@ -11,13 +11,13 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 import zaujaani.roadsense.core.bluetooth.BluetoothGateway
 import zaujaani.roadsense.data.local.DeviceCalibration
-import zaujaani.roadsense.data.repository.SurveyRepository
+import zaujaani.roadsense.data.repository.ImprovedSurveyRepository
 import java.util.*
 import javax.inject.Inject
 
 @HiltViewModel
 class CalibrationViewModel @Inject constructor(
-    private val repository: SurveyRepository,
+    private val repository: ImprovedSurveyRepository,
     private val bluetoothGateway: BluetoothGateway
 ) : ViewModel() {
 

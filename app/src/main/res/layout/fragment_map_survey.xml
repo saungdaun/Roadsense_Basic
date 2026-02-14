@@ -8,7 +8,7 @@
     android:background="@color/background"
     tools:context=".features.map.MapSurveyFragment">
 
-    <!-- Map View (OSM) - tetap full screen -->
+    <!-- Map View (OSM) - fullscreen -->
     <org.osmdroid.views.MapView
         android:id="@+id/mapView"
         android:layout_width="0dp"
@@ -18,7 +18,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- ===== STATUS PANEL ATAS (full width) ===== -->
+    <!-- Status Panel Atas (tetap) -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/statusCard"
         android:layout_width="0dp"
@@ -32,6 +32,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
+        <!-- ... isi panel status (sama seperti sebelumnya) ... -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -153,9 +154,7 @@
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
-
-
-    <!-- ===== Z-AXIS INDICATOR ===== -->
+    <!-- Z-AXIS INDICATOR -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/zAxisCard"
         android:layout_width="wrap_content"
@@ -200,7 +199,7 @@
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- ===== RECORDING / PAUSED / RECONNECTING ===== -->
+    <!-- RECORDING / PAUSED STATUS -->
     <TextView
         android:id="@+id/tvRecordingStatus"
         android:layout_width="wrap_content"
@@ -220,7 +219,7 @@
         tools:background="@color/stop_red"
         tools:text="RECORDING" />
 
-    <!-- ===== BOTTOM PANEL ===== -->
+    <!-- Guideline batas bawah (85%) -->
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/guideline_bottom"
         android:layout_width="wrap_content"
@@ -228,44 +227,7 @@
         android:orientation="horizontal"
         app:layout_constraintGuide_percent="0.85" />
 
-    <!-- Tombol Add Survey & Center Map -->
-    <LinearLayout
-        android:id="@+id/btnAddSurveyContainer"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginEnd="@dimen/spacing_medium"
-        android:layout_marginBottom="@dimen/spacing_medium"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/guideline_bottom">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnAddSurvey"
-            style="@style/Widget.Roadsense.Button"
-            android:layout_width="wrap_content"
-            android:layout_height="@dimen/button_height"
-            android:layout_marginEnd="@dimen/spacing_small"
-            android:enabled="false"
-            android:text="@string/btn_add_survey"
-            app:icon="@drawable/ic_add"
-            app:iconGravity="textStart"
-            app:iconPadding="@dimen/spacing_small"
-            tools:enabled="true"
-            tools:iconTint="@color/white" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnCenterMap"
-            style="@style/Widget.Roadsense.Button"
-            android:layout_width="wrap_content"
-            android:layout_height="@dimen/button_height"
-            android:text="@string/btn_center_map"
-            app:icon="@drawable/ic_center_map"
-            app:iconGravity="textStart"
-            app:iconPadding="@dimen/spacing_small" />
-    </LinearLayout>
-
-    <!-- Data Card (Speed, Distance, Vibration) -->
+    <!-- Data Card (Speed, Distance, Vibration) - kiri bawah -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/dataCard"
         android:layout_width="0dp"
@@ -277,7 +239,7 @@
         app:cardCornerRadius="@dimen/card_corner_radius"
         app:cardElevation="@dimen/elevation_small"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/btnAddSurveyContainer"
+        app:layout_constraintEnd_toStartOf="@id/controlButtonsContainer"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@id/guideline_bottom">
 
@@ -369,7 +331,7 @@
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- ===== CONTROL BUTTONS (VERTICAL) ===== -->
+    <!-- CONTROL BUTTONS (VERTICAL) - semua tombol seragam 64x64 dp -->
     <LinearLayout
         android:id="@+id/controlButtonsContainer"
         android:layout_width="wrap_content"
@@ -380,12 +342,15 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/statusCard">
 
+        <!-- Tombol START/STOP -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnStartStop"
             style="@style/Widget.Roadsense.Button"
-            android:layout_width="@dimen/map_button_size"
-            android:layout_height="@dimen/map_button_size"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
             android:layout_marginBottom="@dimen/spacing_small"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
             android:insetLeft="0dp"
             android:insetTop="0dp"
             android:insetRight="0dp"
@@ -394,14 +359,19 @@
             app:icon="@drawable/ic_play_arrow"
             app:iconGravity="textStart"
             app:iconPadding="@dimen/spacing_small"
+            app:iconSize="32dp"
             tools:text="START"
             tools:iconTint="@color/white" />
 
+        <!-- Tombol PAUSE/RESUME -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnPauseResume"
             style="@style/Widget.Roadsense.Button"
-            android:layout_width="@dimen/map_button_size"
-            android:layout_height="@dimen/map_button_size"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_marginBottom="@dimen/spacing_small"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
             android:enabled="false"
             android:insetLeft="0dp"
             android:insetTop="0dp"
@@ -411,8 +381,50 @@
             app:icon="@drawable/ic_pause"
             app:iconGravity="textStart"
             app:iconPadding="@dimen/spacing_small"
+            app:iconSize="32dp"
             tools:enabled="true"
             tools:text="PAUSE"
+            tools:iconTint="@color/white" />
+
+        <!-- Tombol ADD SURVEY (hanya ikon) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnAddSurvey"
+            style="@style/Widget.Roadsense.Button"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_marginBottom="@dimen/spacing_small"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:enabled="false"
+            android:insetLeft="0dp"
+            android:insetTop="0dp"
+            android:insetRight="0dp"
+            android:insetBottom="0dp"
+            android:text=""
+            app:icon="@drawable/ic_add"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp"
+            app:iconSize="32dp"
+            tools:enabled="true"
+            tools:iconTint="@color/white" />
+
+        <!-- Tombol CENTER MAP (hanya ikon) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCenterMap"
+            style="@style/Widget.Roadsense.Button"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:insetLeft="0dp"
+            android:insetTop="0dp"
+            android:insetRight="0dp"
+            android:insetBottom="0dp"
+            android:text=""
+            app:icon="@drawable/ic_center_map"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp"
+            app:iconSize="32dp"
             tools:iconTint="@color/white" />
     </LinearLayout>
 

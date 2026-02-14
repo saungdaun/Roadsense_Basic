@@ -10,6 +10,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import timber.log.Timber
+import zaujaani.roadsense.core.constants.SurveyConstants
 import zaujaani.roadsense.core.events.RealtimeRoadsenseBus
 import zaujaani.roadsense.domain.model.ESP32SensorData
 import java.io.IOException
@@ -37,16 +38,16 @@ class BluetoothGateway @Inject constructor(
 ) {
 
     companion object {
-        private const val ESP32_NAME = "RoadsenseLogger-v3.7"
-        private val SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
-        private const val BUFFER_SIZE = 1024
-        private const val SOCKET_TIMEOUT_MS = 5000
+        private val ESP32_NAME = SurveyConstants.ESP32_DEVICE_NAME
+        private val SPP_UUID = UUID.fromString(SurveyConstants.BLUETOOTH_SPP_UUID)
+        private const val BUFFER_SIZE = SurveyConstants.BLUETOOTH_BUFFER_SIZE
+        private const val SOCKET_TIMEOUT_MS = SurveyConstants.BLUETOOTH_CONNECTION_TIMEOUT_MS
 
         // Auto-reconnect configuration
-        private const val MAX_RECONNECT_ATTEMPTS = 5
-        private const val RECONNECT_BASE_DELAY = 1000L      // 1 second
-        private const val RECONNECT_MAX_DELAY = 16000L      // 16 seconds max
-        private const val RECONNECT_MULTIPLIER = 2          // Exponential factor
+        private const val MAX_RECONNECT_ATTEMPTS = SurveyConstants.BLUETOOTH_MAX_RECONNECT_ATTEMPTS
+        private const val RECONNECT_BASE_DELAY = SurveyConstants.BLUETOOTH_RECONNECT_DELAY_BASE_MS
+        private const val RECONNECT_MAX_DELAY = SurveyConstants.BLUETOOTH_RECONNECT_DELAY_MAX_MS
+        private const val RECONNECT_MULTIPLIER = SurveyConstants.BLUETOOTH_RECONNECT_DELAY_MULTIPLIER
     }
 
     private val bluetoothManager: BluetoothManager? by lazy {
@@ -373,6 +374,7 @@ class BluetoothGateway @Inject constructor(
         }
 
     }
+
     /**
      * Mengirim perintah kalibrasi ke ESP32.
      * Format: CMD:CAL,DIAM=<diameter>,PULSE=<pulses>

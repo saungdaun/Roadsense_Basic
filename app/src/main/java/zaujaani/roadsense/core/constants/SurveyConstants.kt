@@ -47,6 +47,19 @@ object SurveyConstants {
     const val SPEED_WARNING_THRESHOLD_KMH = 60f
 
     // ============================================================================
+    // CONFIDENCE THRESHOLDS (ditambahkan)
+    // ============================================================================
+
+    /** Kecepatan maksimal untuk confidence HIGH (km/h) */
+    const val CONFIDENCE_SPEED_THRESHOLD_KMH = 20f
+
+    /** Akurasi GPS minimal untuk confidence HIGH (meter) */
+    const val CONFIDENCE_ACCURACY_THRESHOLD_M = 5f
+
+    /** Vibration minimal untuk mendeteksi jalan rusak (g) */
+    const val CONFIDENCE_VIBRATION_THRESHOLD = 1.5f
+
+    // ============================================================================
     // VIBRATION (Z-AXIS) THRESHOLDS
     // ============================================================================
 

@@ -6,34 +6,34 @@
         <item
             android:id="@+id/mapSurveyFragment"
             android:icon="@drawable/ic_survey"
-            android:title="Survey" />
+            android:title="@string/Survey" />
 
         <item
             android:id="@+id/summaryFragment"
             android:icon="@drawable/ic_data"
-            android:title="Data" />
+            android:title="@string/Data" />
 
         <item
             android:id="@+id/calibrationFragment"
             android:icon="@drawable/ic_calibrations"
-            android:title="Calibration" />
+            android:title="@string/kalibrasi" />
 
         <item
             android:id="@+id/settingsFragment"
             android:icon="@drawable/ic_settings"
-            android:title="Settings" />
+            android:title="@string/pengaturan" />
 
         <!-- ITEM BARU: Offline Maps -->
         <item
             android:id="@+id/offlineMapsFragment"
             android:icon="@drawable/ic_map"
-            android:title="@string/offline_maps" />
+            android:title="@string/Peta_Offline" />
 
         <!-- Menu tanpa destination di nav_graph, handle manual -->
         <item
             android:id="@+id/nav_help"
             android:icon="@drawable/ic_help"
-            android:title="Help" />
+            android:title="@string/bantuan" />
 
     </group>
 

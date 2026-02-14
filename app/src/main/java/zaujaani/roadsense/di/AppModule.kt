@@ -12,9 +12,10 @@ import zaujaani.roadsense.core.gps.GPSFusionEngine
 import zaujaani.roadsense.core.gps.GPSGateway
 import zaujaani.roadsense.core.maps.OfflineMapManager
 import zaujaani.roadsense.core.sensor.SensorGateway
-
 import zaujaani.roadsense.data.local.*
-import zaujaani.roadsense.data.repository.*
+import zaujaani.roadsense.data.repository.ImprovedSurveyRepository
+import zaujaani.roadsense.data.repository.TelemetryRepository
+import zaujaani.roadsense.data.repository.UserPreferencesRepository
 import zaujaani.roadsense.domain.engine.QualityScoreCalculator
 import zaujaani.roadsense.domain.engine.SurveyEngine
 import javax.inject.Singleton
@@ -46,20 +47,24 @@ object AppModule {
     fun provideTelemetryDao(db: RoadSenseDatabase): TelemetryDao = db.telemetryDao()
 
     // ----- REPOSITORY -----
+    /**
+     * ImprovedSurveyRepository adalah pengganti SurveyRepository lama.
+     * Semua ViewModel yang membutuhkan data survey (session, segment, kalibrasi) harus menginjeksi ini.
+     */
     @Provides
     @Singleton
-    fun provideSurveyRepository(
-        sessionDao: SessionDao,
-        roadSegmentDao: RoadSegmentDao,
-        calibrationDao: CalibrationDao
-    ): SurveyRepository = SurveyRepository(sessionDao, roadSegmentDao, calibrationDao)
+    fun provideImprovedSurveyRepository(
+        database: RoadSenseDatabase
+    ): ImprovedSurveyRepository = ImprovedSurveyRepository(database)
 
     @Provides
     @Singleton
     fun provideTelemetryRepository(telemetryDao: TelemetryDao): TelemetryRepository =
         TelemetryRepository(telemetryDao)
 
-    // 🔥 UserPreferencesRepository – digunakan oleh SettingsViewModel
+    /**
+     * UserPreferencesRepository digunakan untuk menyimpan preferensi pengguna (DataStore).
+     */
     @Suppress("unused")
     @Provides
     @Singleton

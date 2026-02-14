@@ -6,7 +6,7 @@
 
     <!-- ===== NAVIGATION ===== -->
     <string name="nav_map_survey">Survey</string>
-    <string name="nav_summary">Ringkasan</string>
+    <string name="nav_summary">Data</string>
     <string name="nav_settings">Pengaturan</string>
     <string name="nav_calibration">Kalibrasi</string>
 
@@ -365,7 +365,7 @@
     <string name="app_logo">App Logo</string>
 
     <!-- ===== OFFLINE MAPS ===== -->
-    <string name="offline_maps">Offline Maps</string>
+    <string name="Peta_Offline">Offline Maps</string>
     <string name="total_cache">Total cache: %s</string>
     <string name="estimated_tiles">Perkiraan tile: %d</string>
     <string name="clear_all">Hapus Semua</string>
@@ -417,5 +417,11 @@
     <string name="type">Tipe</string>
     <string name="file_details">Detail File</string>
     <string name="open_location">Buka lokasi</string>
+    <string name="Survey">Survey</string>
+    <string name="Data">Data</string>
+    <string name="kalibrasi">Kalibrasi</string>
+    <string name="pengaturan">Pengaturan</string>
+    <string name="bantuan">Bantuan</string>
+    <string name="offline_maps">Peta Offline</string>
 
 </resources>

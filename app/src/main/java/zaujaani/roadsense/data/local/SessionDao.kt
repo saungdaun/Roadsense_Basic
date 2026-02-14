@@ -20,4 +20,8 @@ interface SessionDao {
 
     @Query("SELECT * FROM survey_sessions WHERE isActive = 1 LIMIT 1")
     suspend fun getActiveSession(): SurveySession?
+
+    // 🔥 TAMBAHKAN INI UNTUK DELETE SESSION
+    @Query("DELETE FROM survey_sessions WHERE id = :sessionId")
+    suspend fun deleteSession(sessionId: Long)
 }
