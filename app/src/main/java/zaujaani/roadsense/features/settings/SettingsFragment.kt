@@ -48,9 +48,8 @@ class SettingsFragment : Fragment() {
         _binding = null
     }
 
-    // ========== SETUP LISTENERS ==========
     private fun setupSettingsListeners() {
-        // GPS Settings - Click untuk buka settings, switch untuk preferensi
+        // GPS Settings
         binding.switchGps.setOnCheckedChangeListener { _, isChecked ->
             viewModel.setGpsEnabled(isChecked)
         }
@@ -84,6 +83,16 @@ class SettingsFragment : Fragment() {
             viewModel.setVibrationDetectionEnabled(isChecked)
         }
 
+        // Email Settings
+        binding.btnSaveEmail.setOnClickListener {
+            val email = binding.editTextEmail.text.toString().trim()
+            if (email.isNotEmpty()) {
+                viewModel.setUserEmail(email)
+            } else {
+                Snackbar.make(binding.root, "Email tidak boleh kosong", Snackbar.LENGTH_SHORT).show()
+            }
+        }
+
         // About Button
         binding.btnAbout.setOnClickListener {
             showAboutDialog()
@@ -105,7 +114,6 @@ class SettingsFragment : Fragment() {
         }
     }
 
-    // ========== OBSERVE STATE FLOW ==========
     private fun observeViewModel() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -137,6 +145,9 @@ class SettingsFragment : Fragment() {
                         setOnCheckedChangeListener { _, isChecked -> viewModel.setVibrationDetectionEnabled(isChecked) }
                     }
 
+                    // Update email field
+                    binding.editTextEmail.setText(state.userEmail)
+
                     // Update info lainnya
                     binding.tvAppVersion.text = "Version ${state.appVersion}"
                     binding.tvDatabaseSize.text = state.databaseSize
@@ -164,7 +175,6 @@ class SettingsFragment : Fragment() {
         }
     }
 
-    // ========== EXPORT DATABASE ==========
     private fun exportDatabase() {
         viewModel.exportDatabase(
             onSuccess = { uri ->
@@ -182,7 +192,6 @@ class SettingsFragment : Fragment() {
         startActivity(Intent.createChooser(shareIntent, "Ekspor Database"))
     }
 
-    // ========== CLEAR CACHE ==========
     private fun showClearCacheConfirmation() {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("Bersihkan Cache")
@@ -194,7 +203,6 @@ class SettingsFragment : Fragment() {
             .show()
     }
 
-    // ========== RESET TO DEFAULTS ==========
     private fun showResetConfirmation() {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("Reset Pengaturan")
@@ -206,7 +214,6 @@ class SettingsFragment : Fragment() {
             .show()
     }
 
-    // ========== ABOUT DIALOG ==========
     private fun showAboutDialog() {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("RoadSense v${viewModel.settingsState.value.appVersion}")

@@ -6,10 +6,12 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import zaujaani.roadsense.R
 import zaujaani.roadsense.databinding.ItemOfflineMapBinding
 
 /**
- * OfflineMapAdapter - menggunakan ListAdapter untuk performa dan animasi otomatis
+ * Adapter untuk menampilkan daftar file peta offline yang sudah diunduh.
+ * Menggunakan ListAdapter untuk performa dan animasi otomatis.
  */
 class OfflineMapAdapter(
     private val onDeleteClick: (OfflineMapFile) -> Unit,

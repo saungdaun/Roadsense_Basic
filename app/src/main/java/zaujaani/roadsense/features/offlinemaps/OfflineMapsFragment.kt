@@ -1,12 +1,18 @@
 package zaujaani.roadsense.features.offlinemaps
 
+import android.Manifest
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -22,8 +28,6 @@ import timber.log.Timber
 import zaujaani.roadsense.R
 import zaujaani.roadsense.databinding.FragmentOfflineMapsBinding
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.*
 
 @AndroidEntryPoint
 class OfflineMapsFragment : Fragment() {
@@ -33,7 +37,23 @@ class OfflineMapsFragment : Fragment() {
 
     private val viewModel: OfflineMapsViewModel by viewModels()
 
-    private lateinit var adapter: OfflineMapAdapter
+    private lateinit var offlineAdapter: OfflineMapAdapter
+    private lateinit var availableAdapter: AvailableMapAdapter
+
+    private var lastLat = -6.9175
+    private var lastLon = 107.6191
+
+    private val locationPermissionRequest = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val fineGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+        val coarseGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
+        if (fineGranted || coarseGranted) {
+            getLastLocation()
+        } else {
+            Snackbar.make(binding.root, R.string.location_permission_denied, Snackbar.LENGTH_LONG).show()
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -47,11 +67,12 @@ class OfflineMapsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        setupRecyclerView()
+        setupRecyclerViews()
         setupListeners()
         observeViewModel()
 
         viewModel.loadCacheInfo()
+        checkLocationPermission()
     }
 
     override fun onResume() {
@@ -59,15 +80,28 @@ class OfflineMapsFragment : Fragment() {
         viewModel.loadCacheInfo()
     }
 
-    private fun setupRecyclerView() {
-        adapter = OfflineMapAdapter(
-            onDeleteClick = { mapFile -> confirmDelete(mapFile) },
-            onFileClick = { mapFile -> showFileDetails(mapFile) }
+    private fun setupRecyclerViews() {
+        offlineAdapter = OfflineMapAdapter(
+            onDeleteClick = { mapFile: OfflineMapFile -> confirmDelete(mapFile) },
+            onFileClick = { mapFile: OfflineMapFile -> showFileDetails(mapFile) }
         )
-
         binding.rvOfflineMaps.apply {
             layoutManager = LinearLayoutManager(requireContext())
-            adapter = this@OfflineMapsFragment.adapter
+            adapter = offlineAdapter
+            setHasFixedSize(true)
+        }
+
+        availableAdapter = AvailableMapAdapter(
+            onDownloadClick = { availableMap: AvailableMap ->
+                viewModel.downloadMap(availableMap)
+            },
+            onItemClick = { availableMap: AvailableMap ->
+                showAvailableMapDetails(availableMap)
+            }
+        )
+        binding.rvAvailableMaps.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            adapter = availableAdapter
             setHasFixedSize(true)
         }
     }
@@ -80,6 +114,26 @@ class OfflineMapsFragment : Fragment() {
                     is OfflineMapsUiState.Success -> showSuccess(state)
                     is OfflineMapsUiState.Empty -> showEmpty()
                     is OfflineMapsUiState.Error -> showError(state.message)
+                }
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.availableMaps.collectLatest { list ->
+                availableAdapter.submitList(list)
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.downloadProgress.collectLatest { progressMap ->
+                availableAdapter.setDownloadProgress(progressMap)
+                val radiusProgress = progressMap.filterKeys { it.startsWith("radius_") }.values.firstOrNull()
+                if (radiusProgress != null) {
+                    binding.downloadProgressLayout.visibility = View.VISIBLE
+                    binding.downloadProgressBar.progress = radiusProgress.progress
+                    binding.downloadProgressText.text = "${radiusProgress.progress}%"
+                } else {
+                    binding.downloadProgressLayout.visibility = View.GONE
                 }
             }
         }
@@ -101,27 +155,13 @@ class OfflineMapsFragment : Fragment() {
             groupEmpty.isVisible = false
             groupError.isVisible = false
 
-            // Lokasi penyimpanan
             tvStoragePath.text = state.storagePath
-
-            // Total ukuran
-            tvTotalSize.text = getString(
-                R.string.total_cache_size,
-                formatFileSize(state.totalSizeMB * 1024 * 1024), // konversi MB ke bytes untuk formatting
-                formatFileSize(state.maxCacheSizeMB * 1024 * 1024)
-            )
-
-            // Perkiraan tile
+            tvTotalSize.text = getString(R.string.total_cache_size, formatFileSize(state.totalSizeMB * 1024 * 1024), formatFileSize(state.maxCacheSizeMB * 1024 * 1024))
             tvTileCount.text = getString(R.string.estimated_tiles, state.estimatedTiles)
-
-            // Ruang tersedia
             tvAvailableSpace.text = getString(R.string.available_space, formatFileSize(state.availableSpaceMB * 1024 * 1024))
 
-            // Progress bar penggunaan
             val usagePercent = (state.totalSizeMB.toFloat() / state.maxCacheSizeMB * 100).toInt().coerceIn(0, 100)
             progressStorage.progress = usagePercent
-
-            // Warna indikator berdasarkan penggunaan
             progressStorage.setIndicatorColor(
                 when {
                     usagePercent < 50 -> ContextCompat.getColor(requireContext(), R.color.good_green)
@@ -130,10 +170,7 @@ class OfflineMapsFragment : Fragment() {
                 }
             )
 
-            // Submit daftar file ke adapter
-            adapter.submitList(state.files)
-
-            // Jumlah file
+            offlineAdapter.submitList(state.files)
             tvFileCount.text = getString(R.string.file_count, state.files.size)
         }
     }
@@ -177,6 +214,40 @@ class OfflineMapsFragment : Fragment() {
         binding.btnRetry.setOnClickListener {
             viewModel.loadCacheInfo()
         }
+
+        binding.btnDownloadRadius.setOnClickListener {
+            showRadiusDialog()
+        }
+    }
+
+    private fun checkLocationPermission() {
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            getLastLocation()
+        } else {
+            locationPermissionRequest.launch(arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ))
+        }
+    }
+
+    private fun getLastLocation() {
+        // Implementasi dengan FusedLocationProviderClient jika tersedia, untuk sementara default Bandung
+        lastLat = -6.9175
+        lastLon = 107.6191
+    }
+
+    private fun showRadiusDialog() {
+        val radii = listOf(5, 10, 20, 50)
+        val items = radii.map { "$it km" }.toTypedArray()
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.select_radius)
+            .setItems(items) { _, which ->
+                val radiusKm = radii[which].toDouble()
+                viewModel.downloadRadiusMap(lastLat, lastLon, radiusKm)
+            }
+            .show()
     }
 
     private fun confirmDelete(mapFile: OfflineMapFile) {
@@ -185,7 +256,14 @@ class OfflineMapsFragment : Fragment() {
             .setMessage(getString(R.string.confirm_delete_file, mapFile.name))
             .setIcon(R.drawable.ic_delete)
             .setPositiveButton(R.string.delete) { _, _ ->
-                deleteFile(mapFile.file)
+                viewLifecycleOwner.lifecycleScope.launch {
+                    viewModel.deleteFile(mapFile.file).onSuccess {
+                        Snackbar.make(binding.root, R.string.file_deleted_successfully, Snackbar.LENGTH_SHORT).show()
+                    }.onFailure { error ->
+                        Snackbar.make(binding.root, getString(R.string.failed_to_delete_file, error.message ?: "Unknown error"), Snackbar.LENGTH_LONG)
+                            .setAction(R.string.retry) { confirmDelete(mapFile) }.show()
+                    }
+                }
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
@@ -197,48 +275,16 @@ class OfflineMapsFragment : Fragment() {
             .setMessage(R.string.confirm_delete_all_maps)
             .setIcon(R.drawable.ic_warning)
             .setPositiveButton(R.string.delete) { _, _ ->
-                clearAllMaps()
+                viewLifecycleOwner.lifecycleScope.launch {
+                    viewModel.clearAllCache().onSuccess {
+                        Snackbar.make(binding.root, R.string.all_maps_cleared, Snackbar.LENGTH_SHORT).show()
+                    }.onFailure { error ->
+                        Snackbar.make(binding.root, getString(R.string.failed_to_clear_cache, error.message ?: "Unknown error"), Snackbar.LENGTH_LONG).show()
+                    }
+                }
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
-    }
-
-    private fun deleteFile(file: File) {
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.deleteFile(file).onSuccess {
-                Snackbar.make(
-                    binding.root,
-                    R.string.file_deleted_successfully,
-                    Snackbar.LENGTH_SHORT
-                ).show()
-            }.onFailure { error ->
-                Snackbar.make(
-                    binding.root,
-                    getString(R.string.failed_to_delete_file, error.message ?: "Unknown error"),
-                    Snackbar.LENGTH_LONG
-                ).setAction(R.string.retry) {
-                    deleteFile(file)
-                }.show()
-            }
-        }
-    }
-
-    private fun clearAllMaps() {
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.clearAllCache().onSuccess {
-                Snackbar.make(
-                    binding.root,
-                    R.string.all_maps_cleared,
-                    Snackbar.LENGTH_SHORT
-                ).show()
-            }.onFailure { error ->
-                Snackbar.make(
-                    binding.root,
-                    getString(R.string.failed_to_clear_cache, error.message ?: "Unknown error"),
-                    Snackbar.LENGTH_LONG
-                ).show()
-            }
-        }
     }
 
     private fun showFileDetails(mapFile: OfflineMapFile) {
@@ -256,53 +302,68 @@ class OfflineMapsFragment : Fragment() {
             .setIcon(R.drawable.ic_info)
             .setPositiveButton(R.string.ok, null)
             .setNeutralButton(R.string.open_location) { _, _ ->
-                openFileLocation(mapFile.file)
+                copyPathToClipboard(mapFile.path)
+                Snackbar.make(binding.root, R.string.path_copied, Snackbar.LENGTH_SHORT).show()
             }
             .show()
     }
 
+    private fun showAvailableMapDetails(map: AvailableMap) {
+        val details = buildString {
+            appendLine("🗺️ ${getString(R.string.name)}: ${map.name}")
+            appendLine("📝 ${getString(R.string.description)}: ${map.description}")
+            appendLine("📦 ${getString(R.string.size)}: ${formatFileSize(map.sizeMb * 1024 * 1024)}")
+            appendLine("🏷️ ${getString(R.string.provider)}: ${map.provider}")
+            appendLine("🔗 URL: ${map.url}")
+        }
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.map_details)
+            .setMessage(details)
+            .setIcon(R.drawable.ic_info)
+            .setPositiveButton(R.string.ok, null)
+            .show()
+    }
+
     private fun openStorageLocation() {
-        try {
-            val state = viewModel.uiState.value
-            if (state is OfflineMapsUiState.Success) {
-                val path = state.storagePath
-
-                val intent = Intent(Intent.ACTION_VIEW).apply {
-                    setDataAndType(Uri.parse(path), "resource/folder")
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                }
-
-                try {
-                    startActivity(intent)
-                } catch (e: Exception) {
-                    openStorageSettings()
-                }
-            }
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to open storage location")
-            Snackbar.make(
-                binding.root,
-                R.string.cannot_open_storage,
-                Snackbar.LENGTH_SHORT
-            ).show()
+        val state = viewModel.uiState.value
+        if (state is OfflineMapsUiState.Success) {
+            val path = state.storagePath
+            showPathDialog(
+                title = getString(R.string.storage_location),
+                path = path,
+                onCopy = { copyPathToClipboard(path) }
+            )
+        } else {
+            openStorageSettings()
         }
     }
 
     private fun openFileLocation(file: File) {
-        try {
-            val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(Uri.fromFile(file.parentFile), "resource/folder")
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        val path = file.absolutePath
+        showPathDialog(
+            title = getString(R.string.file_location),
+            path = path,
+            onCopy = { copyPathToClipboard(path) }
+        )
+    }
+
+    private fun showPathDialog(title: String, path: String, onCopy: () -> Unit) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(title)
+            .setMessage(path)
+            .setPositiveButton(R.string.copy) { _, _ ->
+                onCopy()
+                Snackbar.make(binding.root, R.string.path_copied, Snackbar.LENGTH_SHORT).show()
             }
-            startActivity(intent)
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to open file location")
-            Snackbar.make(
-                binding.root,
-                R.string.cannot_open_location,
-                Snackbar.LENGTH_SHORT
-            ).show()
-        }
+            .setNegativeButton(R.string.close, null)
+            .show()
+    }
+
+    private fun copyPathToClipboard(path: String) {
+        val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText("Path", path)
+        clipboard.setPrimaryClip(clip)
     }
 
     private fun openStorageSettings() {
@@ -311,6 +372,7 @@ class OfflineMapsFragment : Fragment() {
             startActivity(intent)
         } catch (e: Exception) {
             Timber.e(e, "Failed to open storage settings")
+            Snackbar.make(binding.root, R.string.cannot_open_storage, Snackbar.LENGTH_SHORT).show()
         }
     }
 

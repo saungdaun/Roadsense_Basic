@@ -59,7 +59,7 @@ class MapSurveyFragment : Fragment() {
                 return when (menuItem.itemId) {
                     R.id.action_download_maps -> {
                         val bounds = binding.mapView.boundingBox
-                        viewModel.downloadMapArea(requireContext(), bounds, 12..18)
+                        viewModel.downloadMapArea(bounds, 12..18)
                         Snackbar.make(binding.root, R.string.download_started, Snackbar.LENGTH_SHORT).show()
                         true
                     }

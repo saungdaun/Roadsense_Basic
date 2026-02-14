@@ -134,5 +134,6 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.mockito:mockito-core:5.3.1")
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.0.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
 }

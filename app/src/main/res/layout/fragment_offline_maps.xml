@@ -6,10 +6,10 @@
     android:layout_height="match_parent"
     android:background="?attr/colorSurface">
 
-    <!-- Main Content ScrollView -->
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -57,7 +57,9 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
                 app:cardElevation="2dp"
-                app:cardCornerRadius="12dp">
+                app:cardCornerRadius="12dp"
+                android:visibility="gone"
+                tools:visibility="visible">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -219,14 +221,77 @@
 
             </LinearLayout>
 
-            <!-- Files List -->
+            <!-- Download Radius Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnDownloadRadius"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:text="@string/download_area_sekitar"
+                app:icon="@drawable/ic_download"
+                style="@style/Widget.Material3.Button" />
+
+            <!-- Download Progress -->
+            <LinearLayout
+                android:id="@+id/downloadProgressLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:visibility="gone"
+                android:padding="16dp"
+                android:background="?attr/colorSurfaceVariant"
+                android:layout_marginBottom="16dp">
+
+                <ProgressBar
+                    android:id="@+id/downloadProgressBar"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:max="100" />
+
+                <TextView
+                    android:id="@+id/downloadProgressText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="8dp"
+                    android:text="0%" />
+            </LinearLayout>
+
+            <!-- Available Maps Section -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/available_maps"
+                android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
+                android:textStyle="bold"
+                android:paddingVertical="8dp"/>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvAvailableMaps"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"
+                android:layout_marginBottom="16dp"
+                tools:listitem="@layout/item_available_map"
+                tools:itemCount="3" />
+
+            <!-- Offline Maps Section -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/saved_maps"
+                android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
+                android:textStyle="bold"
+                android:paddingVertical="8dp"/>
+
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvOfflineMaps"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:clipToPadding="false"
+                android:nestedScrollingEnabled="false"
                 tools:listitem="@layout/item_offline_map"
-                tools:itemCount="3" />
+                tools:itemCount="2" />
 
             <!-- Empty State -->
             <LinearLayout

@@ -423,5 +423,22 @@
     <string name="pengaturan">Pengaturan</string>
     <string name="bantuan">Bantuan</string>
     <string name="offline_maps">Peta Offline</string>
+    <string name="select_radius">Pilih radius (km)</string>
+    <string name="download_area_sekitar">Download Area Sekitar</string>
+    <string name="available_maps">Peta Tersedia</string>
+    <string name="saved_maps">Peta Tersimpan</string>
+    <string name="location_permission_denied">Izin lokasi diperlukan untuk download area sekitar</string>
+    <string name="map_details">Detail Peta</string>
+    <string name="provider">Provider</string>
+    <string name="open_storage_settings">Buka Pengaturan Penyimpanan</string>
+    <string name="name">Nama</string>
+    <string name="description">Deskripsi</string>
+    <string name="copy">Salin</string>
+    <string name="close">Tutup</string>
+    <string name="file_location">Lokasi File</string>
+    <string name="path_copied">Path telah disalin</string>
+
+
+
 
 </resources>

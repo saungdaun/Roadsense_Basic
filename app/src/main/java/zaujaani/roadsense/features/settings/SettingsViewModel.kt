@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import zaujaani.roadsense.BuildConfig
+import zaujaani.roadsense.core.maps.OfflineMapManager
 import zaujaani.roadsense.data.local.RoadSenseDatabase
 import zaujaani.roadsense.data.repository.UserPreferencesRepository
 import java.io.File
@@ -23,6 +25,7 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val preferencesRepository: UserPreferencesRepository,
+    private val offlineMapManager: OfflineMapManager,
     private val database: RoadSenseDatabase,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
@@ -43,16 +46,17 @@ class SettingsViewModel @Inject constructor(
         val areNotificationsEnabled: Boolean = true,
         val isAutoSaveEnabled: Boolean = true,
         val isVibrationDetectionEnabled: Boolean = true,
-        val appVersion: String = "1.0.0",
+        val userEmail: String = "",
+        val appVersion: String = BuildConfig.VERSION_NAME,
         val databaseSize: String = "0 KB"
     )
 
     init {
         loadSettings()
         loadAppVersion()
-        // Panggil loadDatabaseSize dalam coroutine
         viewModelScope.launch {
             loadDatabaseSize()
+            loadUserEmail()
         }
     }
 
@@ -72,22 +76,17 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    private fun loadAppVersion() {
-        try {
-            val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-            val version = packageInfo.versionName ?: "1.0.0"
-            _settingsState.value = _settingsState.value.copy(appVersion = version)
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to get app version")
-        }
+    private suspend fun loadUserEmail() {
+        val email = preferencesRepository.getCurrentEmail()
+        _settingsState.value = _settingsState.value.copy(userEmail = email)
     }
 
-    /**
-     * Load database size – dipanggil di dalam coroutine
-     */
+    private fun loadAppVersion() {
+        _settingsState.value = _settingsState.value.copy(appVersion = BuildConfig.VERSION_NAME)
+    }
+
     private suspend fun loadDatabaseSize() {
         try {
-            // Nama database sesuai yang didaftarkan di Room
             val dbName = "roadsense_database"
             val dbFile = context.getDatabasePath(dbName)
             val size = if (dbFile.exists()) {
@@ -106,34 +105,34 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    // ========== SETTERS (PERSISTENT) ==========
+    // ========== SETTERS ==========
     fun setGpsEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            preferencesRepository.setGpsEnabled(enabled)
-        }
+        viewModelScope.launch { preferencesRepository.setGpsEnabled(enabled) }
     }
 
     fun setBluetoothEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            preferencesRepository.setBluetoothEnabled(enabled)
-        }
+        viewModelScope.launch { preferencesRepository.setBluetoothEnabled(enabled) }
     }
 
     fun setNotificationsEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            preferencesRepository.setNotificationsEnabled(enabled)
-        }
+        viewModelScope.launch { preferencesRepository.setNotificationsEnabled(enabled) }
     }
 
     fun setAutoSaveEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            preferencesRepository.setAutoSaveEnabled(enabled)
-        }
+        viewModelScope.launch { preferencesRepository.setAutoSaveEnabled(enabled) }
     }
 
     fun setVibrationDetectionEnabled(enabled: Boolean) {
+        viewModelScope.launch { preferencesRepository.setVibrationDetectionEnabled(enabled) }
+    }
+
+    fun setUserEmail(email: String) {
         viewModelScope.launch {
-            preferencesRepository.setVibrationDetectionEnabled(enabled)
+            preferencesRepository.setUserEmail(email)
+            _settingsState.value = _settingsState.value.copy(userEmail = email)
+            // Perbarui konfigurasi OSM dengan email baru
+            offlineMapManager.updateOSMConfiguration()
+            _snackbarMessage.value = "Email berhasil disimpan"
         }
     }
 
@@ -162,10 +161,7 @@ class SettingsViewModel @Inject constructor(
 
                 _snackbarMessage.value = "Database berhasil diekspor"
                 onSuccess(uri)
-
-                // Refresh ukuran database
                 loadDatabaseSize()
-
             } catch (e: Exception) {
                 Timber.e(e, "Export database failed")
                 _snackbarMessage.value = "Gagal mengekspor database: ${e.message}"
@@ -206,6 +202,8 @@ class SettingsViewModel @Inject constructor(
             _isLoading.value = true
             try {
                 preferencesRepository.resetToDefaults()
+                // Setelah reset, email menjadi kosong, perbarui konfigurasi
+                offlineMapManager.updateOSMConfiguration()
                 _snackbarMessage.value = "Pengaturan direset ke default"
             } catch (e: Exception) {
                 _snackbarMessage.value = "Gagal reset pengaturan"
@@ -217,14 +215,12 @@ class SettingsViewModel @Inject constructor(
 
     // ========== OPEN SYSTEM SETTINGS ==========
     fun openGpsSettings() {
-        val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)
     }
 
     fun openBluetoothSettings() {
-        val intent = Intent(Settings.ACTION_BLUETOOTH_SETTINGS)
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val intent = Intent(Settings.ACTION_BLUETOOTH_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)
     }
 

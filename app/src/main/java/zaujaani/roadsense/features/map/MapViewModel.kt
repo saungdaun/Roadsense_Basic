@@ -1,10 +1,10 @@
 package zaujaani.roadsense.features.map
 
-import android.content.Context
 import android.location.Location
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import org.osmdroid.util.BoundingBox
@@ -14,7 +14,6 @@ import timber.log.Timber
 import zaujaani.roadsense.core.bluetooth.BluetoothGateway
 import zaujaani.roadsense.core.constants.SurveyConstants
 import zaujaani.roadsense.core.events.RealtimeRoadsenseBus
-import zaujaani.roadsense.core.gps.GPSGateway
 import zaujaani.roadsense.core.maps.OfflineMapManager
 import zaujaani.roadsense.data.local.*
 import zaujaani.roadsense.data.repository.ImprovedSurveyRepository
@@ -26,12 +25,13 @@ import zaujaani.roadsense.domain.usecase.ZAxisValidation
 import zaujaani.roadsense.domain.usecase.ZAxisValidationHelper
 import javax.inject.Inject
 
+
 @HiltViewModel
 class MapViewModel @Inject constructor(
     private val surveyEngine: SurveyEngine,
     private val bus: RealtimeRoadsenseBus,
     private val bluetoothGateway: BluetoothGateway,
-    private val surveyRepository: ImprovedSurveyRepository, // ✅ GANTI DI SINI
+    private val surveyRepository: ImprovedSurveyRepository,
     private val telemetryRepository: TelemetryRepository,
     private val qualityScoreCalculator: QualityScoreCalculator,
     private val zAxisValidationHelper: ZAxisValidationHelper,
@@ -165,7 +165,7 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun observeTrackingPoints() {
         viewModelScope.launch {
             bus.surveyState
@@ -186,15 +186,7 @@ class MapViewModel @Inject constructor(
     }
 
     private fun loadSavedSegments() {
-        viewModelScope.launch {
-            surveyRepository.getAllSessions() // Flow dari semua sesi? Ini mungkin perlu disesuaikan
-            // Untuk mendapatkan semua segmen, kita perlu fungsi di repository yang mengembalikan semua segmen.
-            // Sementara kita bisa panggil fungsi yang ada: surveyRepository.getSegmentsForSessionFlow(-1) tidak tepat.
-            // Alternatif: buat fungsi getAllSegments di repository jika diperlukan. Tapi untuk sementara, kita bisa skip.
-            // Karena di kode asli memanggil surveyRepository.getAllRoadSegments() yang return Flow<List<RoadSegment>>.
-            // Di ImprovedSurveyRepository kita tidak punya fungsi itu. Mungkin perlu ditambahkan.
-            // Untuk keperluan demo, kita kosongkan dulu.
-        }
+        // TODO: Implement if needed
     }
 
     // ========== PUBLIC API ==========
@@ -204,7 +196,7 @@ class MapViewModel @Inject constructor(
 
     private suspend fun updateDeviceReadyState() {
         val connected = bluetoothGateway.isConnected()
-        val hasCalib = surveyRepository.getActiveCalibration() != null // getActiveCalibration langsung return object, bukan Result
+        val hasCalib = surveyRepository.getActiveCalibration() != null
         _deviceReadyState.value = when {
             !connected -> DeviceReadyState.NOT_CONNECTED
             !hasCalib -> DeviceReadyState.CALIBRATION_NEEDED
@@ -219,20 +211,11 @@ class MapViewModel @Inject constructor(
             }
 
             val sessionIdStr = surveyEngine.generateSessionId()
-            val calibration = surveyRepository.getActiveCalibration() // langsung dapat object
-            val session = SurveySession(
-                surveyorName = "User",
-                startTime = System.currentTimeMillis(),
-                deviceName = android.os.Build.MODEL,
-                calibrationId = calibration?.id,
-                notes = "Session: $sessionIdStr"
-            )
-
-            // createSession mengembalikan Result<Long>
+            val calibration = surveyRepository.getActiveCalibration()
             val result = surveyRepository.createSession(
-                projectName = "Survey", // kita perlu projectName
+                projectName = "Survey",
                 surveyorName = "User",
-                notes = session.notes
+                notes = "Session: $sessionIdStr"
             )
 
             val newSessionId = result.getOrElse { throw it }
@@ -257,11 +240,10 @@ class MapViewModel @Inject constructor(
             surveyEngine.stopSurvey()
             bluetoothGateway.sendCommand("CMD:STOP")
             if (currentSessionId != -1L) {
-                // completeSession di ImprovedSurveyRepository
                 surveyRepository.completeSession(
                     sessionId = currentSessionId,
                     totalDistance = _uiState.value.tripDistance,
-                    avgQuality = 0f // kita bisa hitung dari quality segments nanti
+                    avgQuality = 0f
                 )
             }
             currentSessionId = -1L
@@ -292,7 +274,6 @@ class MapViewModel @Inject constructor(
         surveyEngine.pauseSurvey()
         viewModelScope.launch {
             bluetoothGateway.sendCommand("CMD:PAUSE")
-            // Update session status? ImprovedSurveyRepository punya updateSession
         }
     }
 
@@ -304,23 +285,26 @@ class MapViewModel @Inject constructor(
     }
 
     // ========== OFFLINE MAPS ==========
-    fun downloadMapArea(context: Context, boundingBox: BoundingBox, zoomLevels: IntRange) {
-        offlineMapManager.downloadMapArea(
-            activityContext = context,
-            boundingBox = boundingBox,
-            zoomLevels = zoomLevels,
-            coroutineScope = viewModelScope,
-            onResult = { result ->
-                result.onSuccess { count ->
-                    _uiState.update { it.copy(downloadProgress = null, downloadMessage = "Download selesai: $count tiles") }
-                    Timber.i("Download sukses: $count tiles")
-                }.onFailure { error ->
-                    _uiState.update { it.copy(downloadProgress = null, downloadMessage = "Gagal: ${error.message}") }
-                    Timber.e(error, "Download gagal")
+    fun downloadMapArea(boundingBox: BoundingBox, zoomLevels: IntRange) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(downloadProgress = 0f, downloadMessage = "Menyiapkan download...") }
+            val result = offlineMapManager.downloadMapArea(
+                boundingBox = boundingBox,
+                zoomLevels = zoomLevels,
+                onProgress = { progress ->
+                    _uiState.update { it.copy(downloadProgress = progress / 100f, downloadMessage = "Mendownload... $progress%") }
                 }
+            )
+            result.onSuccess { file ->
+                _uiState.update { it.copy(downloadProgress = null, downloadMessage = "Download selesai: ${file.name}") }
+                Timber.i("Download sukses: ${file.absolutePath}")
+            }.onFailure { error ->
+                _uiState.update { it.copy(downloadProgress = null, downloadMessage = "Gagal: ${error.message}") }
+                Timber.e(error, "Download gagal")
             }
-        )
+        }
 
+        // Juga collect downloadState jika diperlukan (opsional)
         viewModelScope.launch {
             offlineMapManager.downloadState.collect { state ->
                 when (state) {
@@ -414,10 +398,10 @@ class MapViewModel @Inject constructor(
             is ZAxisValidation.InvalidNoMovement,
             is ZAxisValidation.SuspiciousPattern -> {
                 val errorMessage = when (validation) {
-                    is ZAxisValidation.WarningStopped -> validation.message ?: "Kendaraan berhenti"//<<---Elvis operator (?:) always returns the left operand of non-nullable type 'String'.
-                    is ZAxisValidation.InvalidShake -> validation.message ?: "Getaran tidak valid"//<<---Elvis operator (?:) always returns the left operand of non-nullable type 'String'.
-                    is ZAxisValidation.InvalidNoMovement -> validation.message ?: "Tidak ada pergerakan"//<<---Elvis operator (?:) always returns the left operand of non-nullable type 'String'.
-                    is ZAxisValidation.SuspiciousPattern -> validation.message ?: "Pola getaran mencurigakan"//<<---Elvis operator (?:) always returns the left operand of non-nullable type 'String'.
+                    is ZAxisValidation.WarningStopped -> validation.message
+                    is ZAxisValidation.InvalidShake -> validation.message
+                    is ZAxisValidation.InvalidNoMovement -> validation.message
+                    is ZAxisValidation.SuspiciousPattern -> validation.message
                     else -> "Error tidak dikenal"
                 }
                 ZAxisValidationResult(
@@ -482,10 +466,8 @@ class MapViewModel @Inject constructor(
             flags = flags.joinToString(",")
         )
 
-        // insertSegment mengembalikan Result<Long>
         surveyRepository.insertSegment(segment).onSuccess {
             cancelSegmentCreation()
-            // Muat ulang segments? Kita perlu fungsi getAllSegments
             Timber.i("✅ Segment saved: $roadName, ${segment.distanceMeters}m")
         }.onFailure { error ->
             Timber.e(error, "Gagal menyimpan segmen")
@@ -533,7 +515,6 @@ class MapViewModel @Inject constructor(
         val temperature: Float? = null,
         val validationColor: String = "",
         val zAxisValidation: ZAxisValidation? = null,
-        // Untuk download progress
         val downloadProgress: Float? = null,
         val downloadMessage: String? = null
     )
