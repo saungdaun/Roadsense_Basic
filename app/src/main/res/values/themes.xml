@@ -49,7 +49,7 @@
         <item name="windowSplashScreenBackground">@color/black</item>
 
         <!-- Ikon animasi di tengah (bisa vector drawable) -->
-        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_ok</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/drawer_ieu</item>
 
         <!-- Durasi animasi ikon (ms) -->
         <item name="windowSplashScreenAnimationDuration">1000</item>

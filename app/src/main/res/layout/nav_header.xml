@@ -1,32 +1,55 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="150dp"
-    android:background="@color/primary"
+    android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="@dimen/spacing_large"
-    android:gravity="bottom"
+    android:paddingTop="48dp"
+    android:paddingBottom="24dp"
+    android:paddingStart="24dp"
+    android:paddingEnd="24dp"
+    android:background="@color/primary"
     android:theme="@style/ThemeOverlay.AppCompat.Dark">
 
+    <!-- Logo -->
+    <ImageView
+        android:layout_width="192dp"
+        android:layout_height="192dp"
+        android:src="@drawable/drawer_ieu"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="12dp" />
 
-
+    <!-- App Name -->
     <TextView
-        android:layout_width="174dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/spacing_medium"
-        android:text="@string/app_name"
-        android:textColor="@color/on_primary"
-        android:textSize="@dimen/text_xlarge"
-        android:textStyle="bold" />
-
-    <TextView
-        android:id="@+id/textView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/margin_small"
-        android:text="@string/app_version"
+        android:text="Roadsense"
         android:textColor="@color/on_primary"
-        android:textSize="@dimen/text_small" />
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:layout_gravity="center_horizontal" />
+
+    <!-- Subtitle -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Road Monitoring System"
+        android:textColor="@color/on_primary"
+        android:textSize="14sp"
+        android:alpha="0.85"
+        android:layout_marginTop="4dp"
+        android:layout_gravity="center_horizontal" />
+
+    <!-- Version -->
+    <TextView
+        android:id="@+id/textVersion"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Version 1.0"
+        android:textColor="@color/on_primary"
+        android:textSize="12sp"
+        android:alpha="0.7"
+        android:layout_marginTop="8dp"
+        android:layout_gravity="center_horizontal" />
 
 </LinearLayout>
