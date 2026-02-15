@@ -434,4 +434,20 @@
     <string name="ic_restore_desc">Ikon reset</string>
     <string name="ic_info_desc">Ikon info</string>
 
+    <!-- Menu dan notifikasi untuk impor GPS -->
+    <string name="download_maps">Download Maps</string>
+    <string name="import_gps_file">Import GPS File</string>
+    <string name="clear_imported">Hapus Semua Impor</string>
+    <string name="import_success">Berhasil mengimpor %d titik</string>
+    <string name="import_failed">Gagal mengimpor: %s</string>
+    <string name="import_empty">File tidak mengandung data track</string>
+    <string name="clear_imported_success">Semua track impor dihapus</string>
+    <string name="unsupported_format">Format file tidak didukung: %s</string>
+    <string name="pick_file">Pilih file GPX/KML/GeoJSON</string>
+    <string name="clear_imported_tracks">Hapus Semua Impor</string>
+    <string name="file_not_supported">Format file tidak didukung</string>
+
+
+
+
 </resources>

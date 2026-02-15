@@ -1,6 +1,7 @@
 package zaujaani.roadsense.features.map
 
 import android.content.Context
+import android.graphics.Paint
 import android.location.Location
 import android.view.MotionEvent
 import androidx.core.content.ContextCompat
@@ -31,6 +32,9 @@ class MapOverlayManager(
     private var currentLocationAccuracyPolygon: Polygon? = null
     private var distanceMarker: Marker? = null
     private var mapTapOverlay: Overlay? = null
+
+    // Untuk menyimpan track hasil impor
+    private val importedPolylines = mutableListOf<Polyline>()
 
     private var hasCenteredMap = false
 
@@ -92,7 +96,6 @@ class MapOverlayManager(
         if (currentLocationAccuracyPolygon == null) {
             currentLocationAccuracyPolygon = Polygon(mapView).apply {
                 points = createCirclePolygonPoints(geoPoint, accuracyMeters)
-                // Gunakan location_blue sebagai warna outline (karena accuracy_circle_stroke tidak ada)
                 outlinePaint.color = ContextCompat.getColor(context, R.color.location_blue)
                 outlinePaint.strokeWidth = 2f
                 fillPaint.color = ContextCompat.getColor(context, R.color.accuracy_circle_fill)
@@ -143,7 +146,7 @@ class MapOverlayManager(
 
     fun displaySavedSegments(segments: List<RoadSegment>) {
         val toRemove = mapView.overlays.filter { overlay ->
-            overlay is Polyline && overlay != trackingPolyline && overlay != segmentPolyline
+            overlay is Polyline && overlay != trackingPolyline && overlay != segmentPolyline && overlay !in importedPolylines
         }.toList()
         toRemove.forEach { mapView.overlays.remove(it) }
 
@@ -178,6 +181,29 @@ class MapOverlayManager(
         }
         mapView.invalidate()
     }
+
+    // ==================== FUNGSI UNTUK IMPORT GPS ====================
+    fun addImportedTrack(points: List<GeoPoint>, color: Int = ContextCompat.getColor(context, R.color.purple_500)) {
+        val polyline = Polyline(mapView).apply {
+            setPoints(points)
+            outlinePaint.color = color
+            outlinePaint.strokeWidth = 6f
+            outlinePaint.strokeCap = Paint.Cap.ROUND
+            outlinePaint.strokeJoin = Paint.Join.ROUND
+        }
+        mapView.overlays.add(polyline)
+        importedPolylines.add(polyline)
+        mapView.invalidate()
+    }
+
+    fun clearImportedTracks() {
+        importedPolylines.forEach { mapView.overlays.remove(it) }
+        importedPolylines.clear()
+        mapView.invalidate()
+    }
+
+    fun getImportedTracksCount(): Int = importedPolylines.size
+    // ================================================================
 
     fun setupMapTapOverlay() {
         if (mapTapOverlay == null) {
