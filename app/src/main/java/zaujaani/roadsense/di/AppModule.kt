@@ -47,10 +47,6 @@ object AppModule {
     fun provideTelemetryDao(db: RoadSenseDatabase): TelemetryDao = db.telemetryDao()
 
     // ----- REPOSITORY -----
-    /**
-     * ImprovedSurveyRepository adalah pengganti SurveyRepository lama.
-     * Semua ViewModel yang membutuhkan data survey (session, segment, kalibrasi) harus menginjeksi ini.
-     */
     @Provides
     @Singleton
     fun provideImprovedSurveyRepository(
@@ -62,10 +58,6 @@ object AppModule {
     fun provideTelemetryRepository(telemetryDao: TelemetryDao): TelemetryRepository =
         TelemetryRepository(telemetryDao)
 
-    /**
-     * UserPreferencesRepository digunakan untuk menyimpan preferensi pengguna (DataStore).
-     */
-    @Suppress("unused")
     @Provides
     @Singleton
     fun provideUserPreferencesRepository(
@@ -118,6 +110,7 @@ object AppModule {
     @Provides
     @Singleton
     fun provideOfflineMapManager(
-        @ApplicationContext context: Context
-    ): OfflineMapManager = OfflineMapManager(context)
+        @ApplicationContext context: Context,
+        userPreferencesRepo: UserPreferencesRepository   // ✅ ditambahkan
+    ): OfflineMapManager = OfflineMapManager(context, userPreferencesRepo)
 }

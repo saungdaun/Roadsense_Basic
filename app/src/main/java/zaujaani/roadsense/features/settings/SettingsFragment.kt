@@ -48,9 +48,8 @@ class SettingsFragment : Fragment() {
         _binding = null
     }
 
-    // ========== SETUP LISTENERS ==========
     private fun setupSettingsListeners() {
-        // GPS Settings - Click untuk buka settings, switch untuk preferensi
+        // GPS Settings
         binding.switchGps.setOnCheckedChangeListener { _, isChecked ->
             viewModel.setGpsEnabled(isChecked)
         }
@@ -84,6 +83,37 @@ class SettingsFragment : Fragment() {
             viewModel.setVibrationDetectionEnabled(isChecked)
         }
 
+        // Email Settings
+        binding.btnSaveEmail.setOnClickListener {
+            val newEmail = binding.editTextEmail.text.toString().trim()
+            val currentEmail = viewModel.settingsState.value.userEmail
+
+            if (newEmail.isEmpty()) {
+                Snackbar.make(binding.root, "Email tidak boleh kosong", Snackbar.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            if (newEmail == currentEmail) {
+                Snackbar.make(binding.root, "Email sama dengan yang sudah tersimpan", Snackbar.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            // Jika sudah ada email sebelumnya, tanya konfirmasi
+            if (currentEmail.isNotEmpty()) {
+                MaterialAlertDialogBuilder(requireContext())
+                    .setTitle("Ubah Email")
+                    .setMessage("Anda akan mengubah email dari \"$currentEmail\" menjadi \"$newEmail\". Lanjutkan?")
+                    .setPositiveButton("Ya") { _, _ ->
+                        viewModel.setUserEmail(newEmail)
+                    }
+                    .setNegativeButton("Batal", null)
+                    .show()
+            } else {
+                // Langsung simpan jika belum ada email
+                viewModel.setUserEmail(newEmail)
+            }
+        }
+
         // About Button
         binding.btnAbout.setOnClickListener {
             showAboutDialog()
@@ -105,7 +135,6 @@ class SettingsFragment : Fragment() {
         }
     }
 
-    // ========== OBSERVE STATE FLOW ==========
     private fun observeViewModel() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -137,6 +166,15 @@ class SettingsFragment : Fragment() {
                         setOnCheckedChangeListener { _, isChecked -> viewModel.setVibrationDetectionEnabled(isChecked) }
                     }
 
+                    // Update email field (tampilkan email yang tersimpan)
+                    binding.editTextEmail.setText(state.userEmail)
+                    // Tampilkan hint atau indikator bahwa email sudah tersimpan
+                    if (state.userEmail.isNotEmpty()) {
+                        binding.editTextEmail.hint = "Email aktif: ${state.userEmail}"
+                    } else {
+                        binding.editTextEmail.hint = "Masukkan email"
+                    }
+
                     // Update info lainnya
                     binding.tvAppVersion.text = "Version ${state.appVersion}"
                     binding.tvDatabaseSize.text = state.databaseSize
@@ -164,7 +202,6 @@ class SettingsFragment : Fragment() {
         }
     }
 
-    // ========== EXPORT DATABASE ==========
     private fun exportDatabase() {
         viewModel.exportDatabase(
             onSuccess = { uri ->
@@ -182,7 +219,6 @@ class SettingsFragment : Fragment() {
         startActivity(Intent.createChooser(shareIntent, "Ekspor Database"))
     }
 
-    // ========== CLEAR CACHE ==========
     private fun showClearCacheConfirmation() {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("Bersihkan Cache")
@@ -194,7 +230,6 @@ class SettingsFragment : Fragment() {
             .show()
     }
 
-    // ========== RESET TO DEFAULTS ==========
     private fun showResetConfirmation() {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("Reset Pengaturan")
@@ -206,7 +241,6 @@ class SettingsFragment : Fragment() {
             .show()
     }
 
-    // ========== ABOUT DIALOG ==========
     private fun showAboutDialog() {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("RoadSense v${viewModel.settingsState.value.appVersion}")

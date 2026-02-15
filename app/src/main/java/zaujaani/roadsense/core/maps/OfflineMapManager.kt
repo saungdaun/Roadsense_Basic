@@ -17,6 +17,8 @@ import org.osmdroid.tileprovider.util.SimpleRegisterReceiver
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.views.MapView
 import timber.log.Timber
+import zaujaani.roadsense.BuildConfig
+import zaujaani.roadsense.data.repository.UserPreferencesRepository
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
@@ -30,7 +32,8 @@ import kotlin.coroutines.suspendCoroutine
  */
 @Singleton
 class OfflineMapManager @Inject constructor(
-    @ApplicationContext private val appContext: Context
+    @ApplicationContext private val appContext: Context,
+    private val userPreferencesRepo: UserPreferencesRepository
 ) {
 
     companion object {
@@ -112,6 +115,10 @@ class OfflineMapManager @Inject constructor(
 
     init {
         setupOSMDroidConfig()
+        // Perbarui konfigurasi dengan email dari preferences (async)
+        CoroutineScope(Dispatchers.IO).launch {
+            updateOSMConfiguration()
+        }
     }
 
     private fun setupOSMDroidConfig() {
@@ -122,9 +129,26 @@ class OfflineMapManager @Inject constructor(
         config.osmdroidTileCache = cacheDir
         config.tileFileSystemCacheMaxBytes = DEFAULT_MAX_CACHE_SIZE_MB * 1024 * 1024
         config.tileFileSystemCacheTrimBytes = (DEFAULT_MAX_CACHE_SIZE_MB * 0.8).toLong() * 1024 * 1024
-        config.userAgentValue = "RoadSense/1.0"
+        config.userAgentValue = "RoadSense/1.0 (pending email)" // Sementara, akan diganti nanti
 
         Timber.d("OSMDroid configured: ${cacheDir.absolutePath}")
+    }
+
+    /**
+     * Memperbarui user-agent berdasarkan email yang tersimpan di preferences.
+     * Fungsi ini harus dipanggil setiap kali email berubah (misal dari SettingsFragment).
+     */
+    suspend fun updateOSMConfiguration() {
+        val email = userPreferencesRepo.getCurrentEmail()
+        val userAgent = if (email.isNotBlank()) {
+            "Roadsense/${BuildConfig.VERSION_NAME} (Android; contact: $email)"
+        } else {
+            "Roadsense/${BuildConfig.VERSION_NAME} (Android; contact: no-email@example.com)"
+        }
+        withContext(Dispatchers.Main) {
+            Configuration.getInstance().userAgentValue = userAgent
+            Timber.d("OSM configuration updated with user-agent: $userAgent")
+        }
     }
 
     // ==================== PUBLIC API ====================

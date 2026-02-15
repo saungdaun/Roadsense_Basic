@@ -13,6 +13,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
@@ -21,9 +22,13 @@ import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import timber.log.Timber
+import zaujaani.roadsense.core.maps.OfflineMapManager
 import zaujaani.roadsense.core.service.TrackingForegroundService
+import zaujaani.roadsense.data.repository.UserPreferencesRepository
 import zaujaani.roadsense.databinding.ActivityMainBinding
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -32,7 +37,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var navController: NavController
     private lateinit var appBarConfiguration: AppBarConfiguration
 
-    // ========== PERMISSIONS (TIDAK DIUBAH) ==========
+    @Inject
+    lateinit var offlineMapManager: OfflineMapManager
+
+    @Inject
+    lateinit var userPreferencesRepo: UserPreferencesRepository
+
+    // ========== PERMISSIONS ==========
     private val requiredPermissions = mutableListOf(
         Manifest.permission.ACCESS_FINE_LOCATION,
         Manifest.permission.ACCESS_COARSE_LOCATION,
@@ -63,6 +74,7 @@ class MainActivity : AppCompatActivity() {
         if (allGranted) {
             Timber.d("✅ All permissions granted")
             startForegroundService()
+            updateOSMConfiguration()
         } else {
             Timber.w("⚠️ Some permissions denied")
             showPermissionRationale()
@@ -77,48 +89,51 @@ class MainActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbar)
 
         setupNavigation()
-        setupNonNavMenuItems() // hanya untuk help
+        setupNonNavMenuItems()
 
         if (hasRequiredPermissions()) {
             Timber.d("✅ All permissions already granted")
             startForegroundService()
+            updateOSMConfiguration()
         } else {
             checkAndRequestPermissions()
         }
     }
 
-    /**
-     * Setup Navigation dengan NavigationUI (otomatis handle back stack & drawer)
-     */
+    private fun updateOSMConfiguration() {
+        lifecycleScope.launch {
+            offlineMapManager.updateOSMConfiguration()
+            val email = userPreferencesRepo.getCurrentEmail()
+            if (email.isNullOrBlank()) {
+                Toast.makeText(
+                    this@MainActivity,
+                    "Silakan isi email di Pengaturan untuk mendukung server OSM",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
     private fun setupNavigation() {
         val navHostFragment = supportFragmentManager
             .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         navController = navHostFragment.navController
 
-        // Top‑level destinations (hamburger icon akan muncul di sini)
         appBarConfiguration = AppBarConfiguration(
             setOf(
                 R.id.mapSurveyFragment,
                 R.id.summaryFragment,
                 R.id.calibrationFragment,
                 R.id.settingsFragment,
-                R.id.offlineMapsFragment   // <-- TAMBAHKAN INI
+                R.id.offlineMapsFragment
             ),
             binding.drawerLayout
         )
 
         setupActionBarWithNavController(navController, appBarConfiguration)
-
-        // 🔥 INI KUNCI UTAMA: NavigationUI akan otomatis handle semua item drawer
-        // yang ID‑nya cocok dengan ID fragment di nav_graph
         binding.navView.setupWithNavController(navController)
     }
 
-    /**
-     * Menangani item drawer yang TIDAK ADA di nav_graph (misal: Help)
-     * CARA PALING AMAN: tambahkan listener dan panggil NavigationUI.onNavDestinationSelected()
-     * untuk item yang ID‑nya cocok, sisanya manual.
-     */
     private fun setupNonNavMenuItems() {
         binding.navView.setNavigationItemSelectedListener { menuItem ->
             when (menuItem.itemId) {
@@ -128,11 +143,8 @@ class MainActivity : AppCompatActivity() {
                     true
                 }
                 else -> {
-                    // Navigasi dulu, simpan hasilnya
                     val handled = NavigationUI.onNavDestinationSelected(menuItem, navController)
-                    // Tutup drawer (tidak peduli sukses/gagal)
                     binding.drawerLayout.closeDrawer(GravityCompat.START)
-                    // Kembalikan status navigasi
                     handled
                 }
             }
@@ -147,7 +159,6 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    // ========== PERMISSION HANDLERS ==========
     private fun hasRequiredPermissions(): Boolean {
         return requiredPermissions.all {
             ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
@@ -163,6 +174,7 @@ class MainActivity : AppCompatActivity() {
             permissionLauncher.launch(permissionsToRequest)
         } else {
             startForegroundService()
+            updateOSMConfiguration()
         }
     }
 

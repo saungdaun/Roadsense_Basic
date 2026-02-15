@@ -49,7 +49,7 @@ class MapSurveyFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Setup MenuProvider (menggantikan setHasOptionsMenu + onCreateOptionsMenu)
+        // Setup MenuProvider
         requireActivity().addMenuProvider(object : MenuProvider {
             override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
                 menuInflater.inflate(R.menu.map_survey_menu, menu)
@@ -59,7 +59,8 @@ class MapSurveyFragment : Fragment() {
                 return when (menuItem.itemId) {
                     R.id.action_download_maps -> {
                         val bounds = binding.mapView.boundingBox
-                        viewModel.downloadMapArea(requireContext(), bounds, 12..18)
+                        // ✅ HAPUS requireContext() – ViewModel sudah punya context sendiri
+                        viewModel.downloadMapArea(bounds, 12..18)
                         Snackbar.make(binding.root, R.string.download_started, Snackbar.LENGTH_SHORT).show()
                         true
                     }

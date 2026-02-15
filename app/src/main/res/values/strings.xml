@@ -423,5 +423,15 @@
     <string name="pengaturan">Pengaturan</string>
     <string name="bantuan">Bantuan</string>
     <string name="offline_maps">Peta Offline</string>
+    <string name="ic_location_desc">Ikon lokasi</string>
+    <string name="ic_bluetooth_desc">Ikon bluetooth</string>
+    <string name="ic_notifications_desc">Ikon notifikasi</string>
+    <string name="ic_save_desc">Ikon simpan</string>
+    <string name="ic_vibration_desc">Ikon getaran</string>
+    <string name="ic_email_desc">Ikon email</string>
+    <string name="ic_export_desc">Ikon ekspor</string>
+    <string name="ic_delete_desc">Ikon hapus</string>
+    <string name="ic_restore_desc">Ikon reset</string>
+    <string name="ic_info_desc">Ikon info</string>
 
 </resources>

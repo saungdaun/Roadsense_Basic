@@ -7,6 +7,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import timber.log.Timber
 import java.io.IOException
@@ -29,15 +30,16 @@ class UserPreferencesRepository @Inject constructor(
         val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
         val AUTO_SAVE_ENABLED = booleanPreferencesKey("auto_save_enabled")
         val VIBRATION_DETECTION_ENABLED = booleanPreferencesKey("vibration_detection_enabled")
+        val USER_EMAIL = stringPreferencesKey("user_email")
     }
 
-    // ✅ FIXED: Use Pair() constructor instead of 'to' operator
     private val defaultValues: Map<Preferences.Key<*>, Any> = mapOf(
         Pair(GPS_ENABLED, true),
         Pair(BLUETOOTH_ENABLED, true),
         Pair(NOTIFICATIONS_ENABLED, true),
         Pair(AUTO_SAVE_ENABLED, true),
-        Pair(VIBRATION_DETECTION_ENABLED, true)
+        Pair(VIBRATION_DETECTION_ENABLED, true),
+        Pair(USER_EMAIL, "")
     )
 
     val settingsFlow: Flow<Map<Preferences.Key<*>, Any>> = dataStore.data
@@ -60,6 +62,9 @@ class UserPreferencesRepository @Inject constructor(
     fun areNotificationsEnabled(): Flow<Boolean> = settingsFlow.map { it[NOTIFICATIONS_ENABLED] as Boolean }
     fun isAutoSaveEnabled(): Flow<Boolean> = settingsFlow.map { it[AUTO_SAVE_ENABLED] as Boolean }
     fun isVibrationDetectionEnabled(): Flow<Boolean> = settingsFlow.map { it[VIBRATION_DETECTION_ENABLED] as Boolean }
+    fun getUserEmail(): Flow<String> = settingsFlow.map { it[USER_EMAIL] as String }
+
+    suspend fun getCurrentEmail(): String = getUserEmail().first()
 
     suspend fun setGpsEnabled(enabled: Boolean) {
         dataStore.edit { prefs ->
@@ -91,6 +96,12 @@ class UserPreferencesRepository @Inject constructor(
         }
     }
 
+    suspend fun setUserEmail(email: String) {
+        dataStore.edit { prefs ->
+            prefs[USER_EMAIL] = email
+        }
+    }
+
     suspend fun resetToDefaults() {
         dataStore.edit { prefs ->
             prefs[GPS_ENABLED] = true
@@ -98,6 +109,7 @@ class UserPreferencesRepository @Inject constructor(
             prefs[NOTIFICATIONS_ENABLED] = true
             prefs[AUTO_SAVE_ENABLED] = true
             prefs[VIBRATION_DETECTION_ENABLED] = true
+            prefs[USER_EMAIL] = ""
         }
     }
 }

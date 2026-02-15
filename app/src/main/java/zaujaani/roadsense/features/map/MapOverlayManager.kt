@@ -92,7 +92,8 @@ class MapOverlayManager(
         if (currentLocationAccuracyPolygon == null) {
             currentLocationAccuracyPolygon = Polygon(mapView).apply {
                 points = createCirclePolygonPoints(geoPoint, accuracyMeters)
-                outlinePaint.color = ContextCompat.getColor(context, R.color.accuracy_circle_stroke)
+                // Gunakan location_blue sebagai warna outline (karena accuracy_circle_stroke tidak ada)
+                outlinePaint.color = ContextCompat.getColor(context, R.color.location_blue)
                 outlinePaint.strokeWidth = 2f
                 fillPaint.color = ContextCompat.getColor(context, R.color.accuracy_circle_fill)
                 fillPaint.alpha = 32

@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import zaujaani.roadsense.core.maps.OfflineMapManager
 import zaujaani.roadsense.data.local.RoadSenseDatabase
 import zaujaani.roadsense.data.repository.UserPreferencesRepository
 import java.io.File
@@ -23,11 +24,11 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val preferencesRepository: UserPreferencesRepository,
+    private val offlineMapManager: OfflineMapManager,
     private val database: RoadSenseDatabase,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
-    // ========== STATE FLOW ==========
     private val _settingsState = MutableStateFlow(SettingsState())
     val settingsState: StateFlow<SettingsState> = _settingsState.asStateFlow()
 
@@ -43,6 +44,7 @@ class SettingsViewModel @Inject constructor(
         val areNotificationsEnabled: Boolean = true,
         val isAutoSaveEnabled: Boolean = true,
         val isVibrationDetectionEnabled: Boolean = true,
+        val userEmail: String = "",
         val appVersion: String = "1.0.0",
         val databaseSize: String = "0 KB"
     )
@@ -50,13 +52,12 @@ class SettingsViewModel @Inject constructor(
     init {
         loadSettings()
         loadAppVersion()
-        // Panggil loadDatabaseSize dalam coroutine
         viewModelScope.launch {
             loadDatabaseSize()
+            loadUserEmail()
         }
     }
 
-    // ========== LOAD SETTINGS FROM DATASTORE ==========
     private fun loadSettings() {
         viewModelScope.launch {
             preferencesRepository.settingsFlow
@@ -72,6 +73,11 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    private suspend fun loadUserEmail() {
+        val email = preferencesRepository.getCurrentEmail()
+        _settingsState.value = _settingsState.value.copy(userEmail = email)
+    }
+
     private fun loadAppVersion() {
         try {
             val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
@@ -82,12 +88,8 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Load database size – dipanggil di dalam coroutine
-     */
     private suspend fun loadDatabaseSize() {
         try {
-            // Nama database sesuai yang didaftarkan di Room
             val dbName = "roadsense_database"
             val dbFile = context.getDatabasePath(dbName)
             val size = if (dbFile.exists()) {
@@ -106,7 +108,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    // ========== SETTERS (PERSISTENT) ==========
     fun setGpsEnabled(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.setGpsEnabled(enabled)
@@ -137,7 +138,22 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    // ========== EXPORT DATABASE ==========
+    fun setUserEmail(email: String) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                preferencesRepository.setUserEmail(email)
+                offlineMapManager.updateOSMConfiguration()
+                _settingsState.value = _settingsState.value.copy(userEmail = email)
+                _snackbarMessage.value = "Email berhasil disimpan"
+            } catch (e: Exception) {
+                _snackbarMessage.value = "Gagal menyimpan email: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
     fun exportDatabase(onSuccess: (Uri) -> Unit = {}, onError: (String) -> Unit = {}) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -162,10 +178,7 @@ class SettingsViewModel @Inject constructor(
 
                 _snackbarMessage.value = "Database berhasil diekspor"
                 onSuccess(uri)
-
-                // Refresh ukuran database
                 loadDatabaseSize()
-
             } catch (e: Exception) {
                 Timber.e(e, "Export database failed")
                 _snackbarMessage.value = "Gagal mengekspor database: ${e.message}"
@@ -176,7 +189,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    // ========== CLEAR CACHE ==========
     fun clearCache(onComplete: () -> Unit = {}) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -200,12 +212,20 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    // ========== RESET TO DEFAULTS ==========
     fun resetToDefaults() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
                 preferencesRepository.resetToDefaults()
+                _settingsState.value = _settingsState.value.copy(
+                    isGpsEnabled = true,
+                    isBluetoothEnabled = true,
+                    areNotificationsEnabled = true,
+                    isAutoSaveEnabled = true,
+                    isVibrationDetectionEnabled = true,
+                    userEmail = ""
+                )
+                offlineMapManager.updateOSMConfiguration()
                 _snackbarMessage.value = "Pengaturan direset ke default"
             } catch (e: Exception) {
                 _snackbarMessage.value = "Gagal reset pengaturan"
@@ -215,7 +235,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    // ========== OPEN SYSTEM SETTINGS ==========
     fun openGpsSettings() {
         val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -236,7 +255,6 @@ class SettingsViewModel @Inject constructor(
         context.startActivity(intent)
     }
 
-    // ========== CLEAR SNACKBAR ==========
     fun clearSnackbar() {
         _snackbarMessage.value = null
     }
